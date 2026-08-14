@@ -81,14 +81,13 @@ async function handleTranscriptRequest(request) {
       return jsonError("Couldn't find a video ID in that URL. Paste a full YouTube link (or just the 11-character video ID).");
     }
 
-    const { status: httpStatus, html: watchHtml } = await fetchWatchPage(videoId);
-    const playerResponse = extractPlayerResponse(watchHtml);
-    if (!playerResponse) {
+    const { status: httpStatus, playerResponse } = await fetchPlayerResponse(videoId);
+    if (!playerResponse?.videoDetails && !playerResponse?.playabilityStatus) {
       // Temporary debug info - shows what YouTube actually sent back so we
-      // can tell a block/bot-check page apart from a real format change.
-      const snippet = watchHtml.replace(/\s+/g, " ").trim().slice(0, 350);
+      // can tell a block/bot-check response apart from a real API change.
+      const snippet = JSON.stringify(playerResponse).slice(0, 350);
       return jsonError(
-        `YouTube didn't return the expected page data (HTTP ${httpStatus}). Debug: ${snippet}`
+        `YouTube didn't return the expected data (HTTP ${httpStatus}). Debug: ${snippet}`
       );
     }
 
@@ -150,77 +149,35 @@ function extractVideoId(input) {
   return null;
 }
 
-async function fetchWatchPage(videoId) {
-  const res = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en`, {
+// YouTube's public "WEB" client key, embedded in every youtube.com page
+// load's JS bundle - not a secret credential, just an API key that scopes
+// requests to the same internal endpoint the YouTube web player itself
+// calls to load a video. Used here instead of scraping the rendered watch
+// page, which YouTube's anti-bot system blocks from datacenter IPs
+// (Cloudflare Workers included) with an HTTP 429 "unusual traffic" page.
+const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+const INNERTUBE_CLIENT_VERSION = "2.20240101.00.00";
+
+async function fetchPlayerResponse(videoId) {
+  const res = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`, {
+    method: "POST",
     headers: {
+      "Content-Type": "application/json",
       "User-Agent": USER_AGENT,
-      "Accept-Language": "en-US,en;q=0.9",
-      // Without this, requests that look like they're coming from Europe
-      // (common for Cloudflare Workers, depending on which colo handles the
-      // request) get served a cookie-consent interstitial instead of the
-      // real watch page - which has no ytInitialPlayerResponse at all.
-      Cookie: "CONSENT=YES+1",
     },
+    body: JSON.stringify({
+      videoId,
+      context: {
+        client: {
+          clientName: "WEB",
+          clientVersion: INNERTUBE_CLIENT_VERSION,
+          hl: "en",
+        },
+      },
+    }),
   });
-  const html = await res.text();
-  return { status: res.status, html };
-}
-
-function extractPlayerResponse(html) {
-  const marker = "ytInitialPlayerResponse";
-  const markerIdx = html.indexOf(marker);
-  if (markerIdx === -1) return null;
-  const jsonStr = extractBalancedJSON(html, markerIdx);
-  if (!jsonStr) return null;
-  try {
-    return JSON.parse(jsonStr);
-  } catch {
-    return null;
-  }
-}
-
-/** Scans forward from `startIndex` for the first `{...}` object, respecting
- * quoted strings so braces inside strings don't throw off the depth count. */
-function extractBalancedJSON(text, startIndex) {
-  let depth = 0;
-  let start = -1;
-  let inString = false;
-  let stringChar = "";
-  let escape = false;
-
-  for (let i = startIndex; i < text.length; i++) {
-    const ch = text[i];
-    if (start === -1) {
-      if (ch === "{") {
-        start = i;
-        depth = 1;
-      }
-      continue;
-    }
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (ch === "\\") {
-      escape = true;
-      continue;
-    }
-    if (inString) {
-      if (ch === stringChar) inString = false;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      inString = true;
-      stringChar = ch;
-      continue;
-    }
-    if (ch === "{") depth++;
-    else if (ch === "}") {
-      depth--;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
+  const playerResponse = await res.json().catch(() => null);
+  return { status: res.status, playerResponse };
 }
 
 function pickTrack(tracks, preferredLang) {
