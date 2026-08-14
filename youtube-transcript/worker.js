@@ -164,6 +164,13 @@ async function fetchPlayerResponse(videoId) {
     headers: {
       "Content-Type": "application/json",
       "User-Agent": USER_AGENT,
+      // The innertube endpoint checks these against what YouTube's own web
+      // player actually sends - without them it can reject the request
+      // outright (HTTP 403) regardless of IP reputation.
+      Origin: "https://www.youtube.com",
+      Referer: `https://www.youtube.com/watch?v=${videoId}`,
+      "X-Youtube-Client-Name": "1",
+      "X-Youtube-Client-Version": INNERTUBE_CLIENT_VERSION,
     },
     body: JSON.stringify({
       videoId,
@@ -172,6 +179,9 @@ async function fetchPlayerResponse(videoId) {
           clientName: "WEB",
           clientVersion: INNERTUBE_CLIENT_VERSION,
           hl: "en",
+          gl: "US",
+          platform: "DESKTOP",
+          userAgent: USER_AGENT,
         },
       },
     }),
