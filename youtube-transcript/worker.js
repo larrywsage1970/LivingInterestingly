@@ -81,10 +81,15 @@ async function handleTranscriptRequest(request) {
       return jsonError("Couldn't find a video ID in that URL. Paste a full YouTube link (or just the 11-character video ID).");
     }
 
-    const watchHtml = await fetchWatchPage(videoId);
+    const { status: httpStatus, html: watchHtml } = await fetchWatchPage(videoId);
     const playerResponse = extractPlayerResponse(watchHtml);
     if (!playerResponse) {
-      return jsonError("YouTube didn't return the expected page data. The video may be unavailable, or YouTube changed its page format.");
+      // Temporary debug info - shows what YouTube actually sent back so we
+      // can tell a block/bot-check page apart from a real format change.
+      const snippet = watchHtml.replace(/\s+/g, " ").trim().slice(0, 350);
+      return jsonError(
+        `YouTube didn't return the expected page data (HTTP ${httpStatus}). Debug: ${snippet}`
+      );
     }
 
     const status = playerResponse?.playabilityStatus?.status;
@@ -157,7 +162,8 @@ async function fetchWatchPage(videoId) {
       Cookie: "CONSENT=YES+1",
     },
   });
-  return res.text();
+  const html = await res.text();
+  return { status: res.status, html };
 }
 
 function extractPlayerResponse(html) {
