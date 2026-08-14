@@ -150,6 +150,11 @@ async function fetchWatchPage(videoId) {
     headers: {
       "User-Agent": USER_AGENT,
       "Accept-Language": "en-US,en;q=0.9",
+      // Without this, requests that look like they're coming from Europe
+      // (common for Cloudflare Workers, depending on which colo handles the
+      // request) get served a cookie-consent interstitial instead of the
+      // real watch page - which has no ytInitialPlayerResponse at all.
+      Cookie: "CONSENT=YES+1",
     },
   });
   return res.text();
