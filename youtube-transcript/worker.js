@@ -338,15 +338,23 @@ function parseApplePodcastsUrl(input) {
   }
 }
 
-async function itunesLookup(id, entity) {
-  const res = await fetch(`https://itunes.apple.com/lookup?id=${encodeURIComponent(id)}&entity=${entity}`);
+// Looking up a single episode directly by its track id
+// (entity=podcastEpisode&id=<episodeId>) is unreliable in practice - Apple's
+// directory frequently returns zero results for real, valid episode ids.
+// The reliable path is looking up the *show* with entity=podcastEpisode,
+// which returns the show itself as results[0] plus its ~200 most recent
+// episodes as results[1..] - then matching by track id within that list.
+async function itunesLookupShowWithEpisodes(collectionId) {
+  const res = await fetch(
+    `https://itunes.apple.com/lookup?id=${encodeURIComponent(collectionId)}&entity=podcastEpisode&limit=200`
+  );
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
-  return data?.results?.[0] || null;
+  return data?.results?.length ? data.results : null;
 }
 
 // Resolves an Apple Podcasts episode link to its actual audio file URL.
-// Fast path: Apple's episode lookup sometimes includes the audio URL
+// Fast path: Apple's episode listing sometimes includes the audio URL
 // directly. Fallback: look up the show's RSS feed and match this episode
 // inside it by title/release date, then read the <enclosure> URL - the same
 // technique most third-party podcast apps use, since Apple's directory
@@ -363,20 +371,31 @@ async function resolvePodcastEpisode(inputUrl) {
     throw new Error("That looks like a link to the show, not a specific episode. Open the episode itself, then Share > Copy Link.");
   }
 
-  const episodeMeta = await itunesLookup(episodeId, "podcastEpisode");
-  if (!episodeMeta) {
-    throw new Error("Apple's podcast directory doesn't recognize that episode.");
+  const results = await itunesLookupShowWithEpisodes(collectionId);
+  if (!results) {
+    throw new Error("Apple's podcast directory doesn't recognize that show.");
   }
+  const showMeta = results[0];
+  const episodeMeta = results.slice(1).find((r) => String(r.trackId) === String(episodeId));
+
+  if (!episodeMeta) {
+    // Apple's episode listing only covers the ~200 most recent episodes, so
+    // older back-catalog episodes land here with no title/date to match on -
+    // no point fetching the RSS feed, there's nothing to match against.
+    throw new Error(
+      `That episode isn't in "${showMeta.collectionName}"'s recent-episodes list from Apple (older back-catalog episodes beyond the most recent ~200 aren't supported yet).`
+    );
+  }
+
   if (episodeMeta.episodeUrl) {
     return {
       audioUrl: episodeMeta.episodeUrl,
       title: episodeMeta.trackName || "Untitled episode",
-      showTitle: episodeMeta.collectionName || "",
+      showTitle: showMeta.collectionName || "",
     };
   }
 
-  const showMeta = await itunesLookup(collectionId, "podcast");
-  if (!showMeta?.feedUrl) {
+  if (!showMeta.feedUrl) {
     throw new Error("Couldn't find this show's RSS feed via Apple's directory.");
   }
   const rssRes = await fetch(showMeta.feedUrl, { headers: { "User-Agent": USER_AGENT } });
@@ -384,16 +403,18 @@ async function resolvePodcastEpisode(inputUrl) {
     throw new Error(`Couldn't fetch the show's RSS feed (HTTP ${rssRes.status}).`);
   }
   const items = parseRssItems(await rssRes.text());
-  const match = matchEpisodeInFeed(items, episodeMeta.trackName, episodeMeta.releaseDate);
-  if (!match) {
-    throw new Error(`Found "${showMeta.collectionName}"'s feed but couldn't confidently match this episode inside it.`);
-  }
 
-  return {
-    audioUrl: match.enclosureUrl,
-    title: episodeMeta.trackName || match.title || "Untitled episode",
-    showTitle: showMeta.collectionName || episodeMeta.collectionName || "",
-  };
+  // Apple knows this episode's title/release date even without a direct
+  // audio URL for it - use those to match it into the feed.
+  const match = matchEpisodeInFeed(items, episodeMeta.trackName, episodeMeta.releaseDate);
+  if (match) {
+    return {
+      audioUrl: match.enclosureUrl,
+      title: episodeMeta.trackName || match.title || "Untitled episode",
+      showTitle: showMeta.collectionName || "",
+    };
+  }
+  throw new Error(`Found "${showMeta.collectionName}"'s feed but couldn't confidently match "${episodeMeta.trackName}" inside it.`);
 }
 
 function parseRssItems(xml) {
