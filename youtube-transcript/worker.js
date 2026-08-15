@@ -323,16 +323,20 @@ async function handlePodcastStatus(request, env) {
 //   https://podcasts.apple.com/us/podcast/show-name/id1200361736?i=1000552334455
 // id1200361736 is the show's Apple "collection" id; i=... is the specific
 // episode's Apple "track" id. Both are needed - a link to just the show
-// (no `i` param) doesn't identify a single episode.
+// (no `i` param) doesn't identify a single episode. The leading /us/ is
+// Apple's storefront country code - carried through to the lookup call
+// below, since the lookup API is unreliable without an explicit country.
 function parseApplePodcastsUrl(input) {
   try {
     const u = new URL(input.trim());
     if (!/(^|\.)podcasts\.apple\.com$/i.test(u.hostname)) return null;
+    const countryMatch = u.pathname.match(/^\/([a-z]{2})\//i);
+    const country = countryMatch ? countryMatch[1].toUpperCase() : "US";
     const collectionMatch = u.pathname.match(/\/id(\d+)/);
     const collectionId = collectionMatch ? collectionMatch[1] : null;
     const episodeId = u.searchParams.get("i");
     if (!collectionId) return null;
-    return { collectionId, episodeId };
+    return { collectionId, episodeId, country };
   } catch {
     return null;
   }
@@ -341,12 +345,15 @@ function parseApplePodcastsUrl(input) {
 // Looking up a single episode directly by its track id
 // (entity=podcastEpisode&id=<episodeId>) is unreliable in practice - Apple's
 // directory frequently returns zero results for real, valid episode ids.
-// The reliable path is looking up the *show* with entity=podcastEpisode,
-// which returns the show itself as results[0] plus its ~200 most recent
-// episodes as results[1..] - then matching by track id within that list.
-async function itunesLookupShowWithEpisodes(collectionId) {
+// The reliable path (confirmed against Apple's own developer forums, since
+// this entity type isn't in their official docs) is looking up the *show*
+// with media=podcast&entity=podcastEpisode - which returns the show itself
+// as results[0] plus its ~200 most recent episodes as results[1..] - then
+// matching by track id within that list. Both `media=podcast` and
+// `country` are required for reliable results; entity alone isn't enough.
+async function itunesLookupShowWithEpisodes(collectionId, country) {
   const res = await fetch(
-    `https://itunes.apple.com/lookup?id=${encodeURIComponent(collectionId)}&entity=podcastEpisode&limit=200`
+    `https://itunes.apple.com/lookup?id=${encodeURIComponent(collectionId)}&country=${encodeURIComponent(country)}&media=podcast&entity=podcastEpisode&limit=200`
   );
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
@@ -366,12 +373,12 @@ async function resolvePodcastEpisode(inputUrl) {
       "Couldn't recognize that as an Apple Podcasts link. Paste a link from the Apple Podcasts app or podcasts.apple.com (Share > Copy Link on the episode)."
     );
   }
-  const { collectionId, episodeId } = parsed;
+  const { collectionId, episodeId, country } = parsed;
   if (!episodeId) {
     throw new Error("That looks like a link to the show, not a specific episode. Open the episode itself, then Share > Copy Link.");
   }
 
-  const results = await itunesLookupShowWithEpisodes(collectionId);
+  const results = await itunesLookupShowWithEpisodes(collectionId, country);
   if (!results) {
     throw new Error("Apple's podcast directory doesn't recognize that show.");
   }
