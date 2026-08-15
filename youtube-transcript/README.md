@@ -77,12 +77,20 @@ it. If a show is on both, use its Apple Podcasts link instead.
 1. Sign up at [assemblyai.com](https://www.assemblyai.com/) and grab an API
    key from their dashboard (they have a free usage tier, then pay-as-you-go
    per hour of audio transcribed).
-2. Add it as a Worker secret: Cloudflare dashboard → this Worker → Settings
-   → Variables and Secrets → add `ASSEMBLYAI_API_KEY`, or
-   `npx wrangler secret put ASSEMBLYAI_API_KEY` from this folder if you're
-   using the CLI alongside Git deploys.
-3. That's it — no other config. If the secret isn't set, Apple Podcasts
-   links just return a clear "not connected yet" message instead of
+2. Add it via Cloudflare's **Secrets Store** (Workers & Pages → Secrets
+   Store → Create secret), named `ASSEMBLYAI_API_KEY`. Note the Store ID
+   shown on that page.
+3. Bind it to this Worker so `wrangler.toml`'s `[[secrets_store_secrets]]`
+   block picks it up automatically on every deploy (see the `store_id` in
+   that file — update it if your Store ID differs). This is the part that
+   matters: secrets added only through the Worker's own Settings/Bindings
+   pages by hand were found (the hard way) to not reliably survive the next
+   git-triggered deploy — declaring the binding in `wrangler.toml` instead
+   keeps it version-controlled and re-applied on every deploy, not just
+   whichever deploy happened to be live when you clicked "Add" in the
+   dashboard.
+4. That's it — no other config needed. If the secret isn't set, Apple
+   Podcasts links just return a clear "not connected yet" message instead of
    breaking the app; YouTube links work regardless.
 
 ## Connecting Google Drive (auto-save transcripts as .txt)

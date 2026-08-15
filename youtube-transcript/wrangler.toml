@@ -1,3 +1,25 @@
 name = "youtube-transcript-extractor"
 main = "worker.js"
 compatibility_date = "2024-11-01"
+
+# Secrets Store bindings, declared here (version-controlled) instead of only
+# in the dashboard, so they survive every git-triggered deploy automatically
+# instead of needing to be re-added by hand each time. store_id is this
+# account's Secrets Store (Workers & Pages -> Secrets Store -> Store ID).
+# secret_name must match the name the secret was created under in the Store;
+# binding is the name worker.js reads via env.<binding> - kept identical to
+# secret_name here on purpose, so there's only one name to keep track of.
+[[secrets_store_secrets]]
+binding = "ASSEMBLYAI_API_KEY"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "ASSEMBLYAI_API_KEY"
+
+[[secrets_store_secrets]]
+binding = "APPS_SCRIPT_URL"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "APPS_SCRIPT_URL"
+
+[[secrets_store_secrets]]
+binding = "APPS_SCRIPT_TOKEN"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "APPS_SCRIPT_TOKEN"
