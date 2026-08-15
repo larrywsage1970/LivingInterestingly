@@ -1,13 +1,30 @@
 /**
- * YouTube Transcript Extractor - Cloudflare Worker
+ * Transcript Extractor - Cloudflare Worker
  *
- * Serves a mobile-friendly page at GET / where you paste a YouTube URL and
- * get back the video's transcript (plain text or with timestamps), ready to
- * copy or download and drop into a doc for podcast/blog work.
+ * Serves a mobile-friendly page at GET / where you paste a YouTube URL or an
+ * Apple Podcasts episode link and get back a transcript (plain text or with
+ * timestamps), ready to copy or download and drop into a doc for
+ * podcast/blog work.
  *
- * POST /api/transcript { url } does the actual work server-side (YouTube's
- * caption endpoints don't send CORS headers, so this can't run purely in the
- * browser - the Worker is the fetch-on-your-behalf piece).
+ * POST /api/transcript { url } handles YouTube: fetches the video's existing
+ * captions server-side (YouTube's caption endpoints don't send CORS headers,
+ * so this can't run purely in the browser).
+ *
+ * POST /api/podcast/start { url } + GET /api/podcast/status?id=...  handle
+ * Apple Podcasts: resolves the episode link to its actual audio file (via
+ * Apple's iTunes lookup API and, if needed, the show's own RSS feed), then
+ * hands that URL to AssemblyAI to transcribe. Podcasts don't usually ship
+ * existing captions the way YouTube does, so this is real speech-to-text,
+ * not caption-fetching - AssemblyAI does the actual transcription
+ * server-side (fetching the audio itself from the URL we give it), which is
+ * why this still fits in a Worker: we're only ever passing URLs and polling
+ * for a result, never handling the audio bytes ourselves. Needs the
+ * ASSEMBLYAI_API_KEY Worker secret - see README's Podcast section.
+ *
+ * Spotify episode links are explicitly not supported: Spotify has no public
+ * API or link that resolves to a downloadable audio file (podcast audio is
+ * served through their app's own DRM'd streaming), so there's no way to get
+ * from a Spotify link to something AssemblyAI (or anything else) can fetch.
  *
  * POST /api/save-to-drive { filename, text } optionally relays a transcript
  * to a small Google Apps Script "bridge" (see README) which drops it into a
@@ -25,6 +42,14 @@ export default {
 
     if (url.pathname === "/api/transcript" && request.method === "POST") {
       return handleTranscriptRequest(request);
+    }
+
+    if (url.pathname === "/api/podcast/start" && request.method === "POST") {
+      return handlePodcastStart(request, env);
+    }
+
+    if (url.pathname === "/api/podcast/status" && request.method === "GET") {
+      return handlePodcastStatus(request, env);
     }
 
     if (url.pathname === "/api/save-to-drive" && request.method === "POST") {
@@ -227,12 +252,267 @@ function decodeEntities(str) {
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
 }
 
+// ── PODCAST TRANSCRIPTS (Apple Podcasts -> AssemblyAI) ─────────────────────
+
+async function handlePodcastStart(request, env) {
+  try {
+    const { url: podcastUrl } = await request.json();
+    if (!podcastUrl) return jsonError("Paste a podcast episode link first.");
+
+    if (/open\.spotify\.com/i.test(podcastUrl)) {
+      return jsonError(
+        "Spotify doesn't allow extracting episode audio outside their app - there's no public link or API that resolves to a downloadable file. Try the same episode's Apple Podcasts link instead (most shows are on both)."
+      );
+    }
+
+    if (!env.ASSEMBLYAI_API_KEY) {
+      return jsonError(
+        "Podcast transcription isn't connected yet - set the ASSEMBLYAI_API_KEY Worker secret (see README's Podcast section)."
+      );
+    }
+
+    const episode = await resolvePodcastEpisode(podcastUrl);
+    const transcriptId = await startAssemblyAITranscription(episode.audioUrl, env.ASSEMBLYAI_API_KEY);
+
+    return new Response(
+      JSON.stringify({
+        transcriptId,
+        title: episode.title,
+        showTitle: episode.showTitle,
+      }),
+      { headers: { "content-type": "application/json" } }
+    );
+  } catch (err) {
+    return jsonError(err.message || String(err));
+  }
+}
+
+async function handlePodcastStatus(request, env) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+    if (!id) return jsonError("Missing transcript id.");
+    if (!env.ASSEMBLYAI_API_KEY) {
+      return jsonError("Podcast transcription isn't connected yet - set the ASSEMBLYAI_API_KEY Worker secret.");
+    }
+
+    const data = await getAssemblyAIStatus(id, env.ASSEMBLYAI_API_KEY);
+    if (data.status === "error") {
+      return jsonError(data.error || "Transcription failed.");
+    }
+    if (data.status !== "completed") {
+      return new Response(JSON.stringify({ status: data.status }), {
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    const paragraphs = await getAssemblyAIParagraphs(id, env.ASSEMBLYAI_API_KEY);
+    return new Response(
+      JSON.stringify({
+        status: "completed",
+        segments: segmentsFromParagraphs(paragraphs),
+      }),
+      { headers: { "content-type": "application/json" } }
+    );
+  } catch (err) {
+    return jsonError(err.message || String(err));
+  }
+}
+
+// Apple Podcasts episode links look like:
+//   https://podcasts.apple.com/us/podcast/show-name/id1200361736?i=1000552334455
+// id1200361736 is the show's Apple "collection" id; i=... is the specific
+// episode's Apple "track" id. Both are needed - a link to just the show
+// (no `i` param) doesn't identify a single episode.
+function parseApplePodcastsUrl(input) {
+  try {
+    const u = new URL(input.trim());
+    if (!/(^|\.)podcasts\.apple\.com$/i.test(u.hostname)) return null;
+    const collectionMatch = u.pathname.match(/\/id(\d+)/);
+    const collectionId = collectionMatch ? collectionMatch[1] : null;
+    const episodeId = u.searchParams.get("i");
+    if (!collectionId) return null;
+    return { collectionId, episodeId };
+  } catch {
+    return null;
+  }
+}
+
+async function itunesLookup(id, entity) {
+  const res = await fetch(`https://itunes.apple.com/lookup?id=${encodeURIComponent(id)}&entity=${entity}`);
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  return data?.results?.[0] || null;
+}
+
+// Resolves an Apple Podcasts episode link to its actual audio file URL.
+// Fast path: Apple's episode lookup sometimes includes the audio URL
+// directly. Fallback: look up the show's RSS feed and match this episode
+// inside it by title/release date, then read the <enclosure> URL - the same
+// technique most third-party podcast apps use, since Apple's directory
+// itself is just an index over each show's own RSS feed.
+async function resolvePodcastEpisode(inputUrl) {
+  const parsed = parseApplePodcastsUrl(inputUrl);
+  if (!parsed) {
+    throw new Error(
+      "Couldn't recognize that as an Apple Podcasts link. Paste a link from the Apple Podcasts app or podcasts.apple.com (Share > Copy Link on the episode)."
+    );
+  }
+  const { collectionId, episodeId } = parsed;
+  if (!episodeId) {
+    throw new Error("That looks like a link to the show, not a specific episode. Open the episode itself, then Share > Copy Link.");
+  }
+
+  const episodeMeta = await itunesLookup(episodeId, "podcastEpisode");
+  if (!episodeMeta) {
+    throw new Error("Apple's podcast directory doesn't recognize that episode.");
+  }
+  if (episodeMeta.episodeUrl) {
+    return {
+      audioUrl: episodeMeta.episodeUrl,
+      title: episodeMeta.trackName || "Untitled episode",
+      showTitle: episodeMeta.collectionName || "",
+    };
+  }
+
+  const showMeta = await itunesLookup(collectionId, "podcast");
+  if (!showMeta?.feedUrl) {
+    throw new Error("Couldn't find this show's RSS feed via Apple's directory.");
+  }
+  const rssRes = await fetch(showMeta.feedUrl, { headers: { "User-Agent": USER_AGENT } });
+  if (!rssRes.ok) {
+    throw new Error(`Couldn't fetch the show's RSS feed (HTTP ${rssRes.status}).`);
+  }
+  const items = parseRssItems(await rssRes.text());
+  const match = matchEpisodeInFeed(items, episodeMeta.trackName, episodeMeta.releaseDate);
+  if (!match) {
+    throw new Error(`Found "${showMeta.collectionName}"'s feed but couldn't confidently match this episode inside it.`);
+  }
+
+  return {
+    audioUrl: match.enclosureUrl,
+    title: episodeMeta.trackName || match.title || "Untitled episode",
+    showTitle: showMeta.collectionName || episodeMeta.collectionName || "",
+  };
+}
+
+function parseRssItems(xml) {
+  const items = [];
+  const itemRe = /<item\b[^>]*>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = itemRe.exec(xml)) !== null) {
+    const block = m[1];
+    const enclosureMatch = block.match(/<enclosure\b[^>]*\burl="([^"]+)"[^>]*\/?>/i);
+    if (!enclosureMatch) continue; // no audio in this item, nothing to match against
+    items.push({
+      title: decodeEntities(extractRssTag(block, "title") || "").trim(),
+      pubDate: extractRssTag(block, "pubDate"),
+      enclosureUrl: decodeEntities(enclosureMatch[1]),
+    });
+  }
+  return items;
+}
+
+// Handles both `<title>Text</title>` and `<title><![CDATA[Text]]></title>`.
+function extractRssTag(block, tag) {
+  const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
+  const m = block.match(re);
+  if (!m) return null;
+  const raw = m[1].trim();
+  const cdata = raw.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
+  return cdata ? cdata[1] : raw;
+}
+
+function normalizeEpisodeTitle(s) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function matchEpisodeInFeed(items, targetTitle, targetReleaseDate) {
+  const normTarget = normalizeEpisodeTitle(targetTitle);
+
+  const exact = items.find((it) => normTarget && normalizeEpisodeTitle(it.title) === normTarget);
+  if (exact) return exact;
+
+  // No exact title match - narrow by release date first (within 3 days, to
+  // allow for feed-vs-directory timezone/republish drift), then prefer
+  // whichever of those has the closest title.
+  const targetTime = targetReleaseDate ? Date.parse(targetReleaseDate) : NaN;
+  if (!isNaN(targetTime)) {
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+    const nearInTime = items
+      .map((it) => ({ it, dt: Date.parse(it.pubDate) }))
+      .filter(({ dt }) => !isNaN(dt) && Math.abs(dt - targetTime) <= THREE_DAYS_MS)
+      .sort((a, b) => Math.abs(a.dt - targetTime) - Math.abs(b.dt - targetTime));
+    if (nearInTime.length) {
+      const titleish = nearInTime.find(
+        ({ it }) => normTarget && (normalizeEpisodeTitle(it.title).includes(normTarget) || normTarget.includes(normalizeEpisodeTitle(it.title)))
+      );
+      return (titleish || nearInTime[0]).it;
+    }
+  }
+
+  // Last resort: partial title containment, no usable date to lean on.
+  return (
+    items.find(
+      (it) => normTarget && (normalizeEpisodeTitle(it.title).includes(normTarget) || normTarget.includes(normalizeEpisodeTitle(it.title)))
+    ) || null
+  );
+}
+
+const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
+
+async function startAssemblyAITranscription(audioUrl, apiKey) {
+  const res = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
+    method: "POST",
+    headers: { Authorization: apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ audio_url: audioUrl }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.id) {
+    throw new Error(data?.error || `AssemblyAI rejected the transcription request (HTTP ${res.status}).`);
+  }
+  return data.id;
+}
+
+async function getAssemblyAIStatus(id, apiKey) {
+  const res = await fetch(`${ASSEMBLYAI_BASE}/transcript/${id}`, {
+    headers: { Authorization: apiKey },
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) {
+    throw new Error(`Couldn't check transcription status (HTTP ${res.status}).`);
+  }
+  return data;
+}
+
+async function getAssemblyAIParagraphs(id, apiKey) {
+  const res = await fetch(`${ASSEMBLYAI_BASE}/transcript/${id}/paragraphs`, {
+    headers: { Authorization: apiKey },
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) {
+    throw new Error(`Couldn't fetch the finished transcript (HTTP ${res.status}).`);
+  }
+  return data.paragraphs || [];
+}
+
+// AssemblyAI paragraph start/end are in milliseconds; segments elsewhere in
+// this app use seconds (matching YouTube's caption track units), so convert
+// here once rather than at every call site.
+function segmentsFromParagraphs(paragraphs) {
+  return paragraphs.map((p) => ({
+    start: p.start / 1000,
+    dur: Math.max(0, (p.end - p.start) / 1000),
+    text: p.text.trim(),
+  }));
+}
+
 const PAGE_HTML = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YouTube Transcript Extractor</title>
+<title>Transcript Extractor</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -332,11 +612,11 @@ const PAGE_HTML = `<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <h1>YouTube Transcript Extractor</h1>
-  <p class="sub">Paste a video link, get the transcript, copy it into your podcast/blog notes.</p>
+  <h1>Transcript Extractor</h1>
+  <p class="sub">Paste a YouTube link or an Apple Podcasts episode link, get the transcript, copy it into your podcast/blog notes.</p>
 
   <div class="card">
-    <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." inputmode="url" autocapitalize="off" autocorrect="off">
+    <input type="text" id="urlInput" placeholder="YouTube or Apple Podcasts episode link..." inputmode="url" autocapitalize="off" autocorrect="off">
     <button class="btn-primary" id="fetchBtn">Get Transcript</button>
     <div id="status"></div>
     <div id="error"></div>
@@ -349,7 +629,7 @@ const PAGE_HTML = `<!doctype html>
     <div class="btn-row">
       <button id="copyBtn">Copy</button>
       <button id="downloadTxtBtn">Download .txt</button>
-      <button id="saveDriveBtn">Save to Drive</button>
+      <button id="saveDriveBtn">Save to Drive again</button>
     </div>
     <div id="driveStatus"></div>
   </div>
@@ -387,27 +667,76 @@ const PAGE_HTML = `<!doctype html>
 
   timestampToggle.addEventListener('change', render);
 
+  function detectSource(url) {
+    if (/open\\.spotify\\.com/i.test(url)) return 'spotify';
+    if (/podcasts\\.apple\\.com/i.test(url)) return 'applepodcasts';
+    return 'youtube';
+  }
+
+  async function pollPodcastStatus(transcriptId) {
+    const started = Date.now();
+    while (true) {
+      await new Promise((r) => setTimeout(r, 4000));
+      const elapsedSec = Math.round((Date.now() - started) / 1000);
+      if (elapsedSec > 900) {
+        throw new Error('Transcription is taking unusually long (15+ min) - giving up. Try again later.');
+      }
+      statusEl.textContent = 'Transcribing... ' + elapsedSec + 's elapsed (full episodes can take a few minutes)';
+      const res = await fetch('/api/podcast/status?id=' + encodeURIComponent(transcriptId));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unknown error');
+      if (data.status === 'completed') return data;
+    }
+  }
+
   fetchBtn.addEventListener('click', async () => {
     const url = urlInput.value.trim();
     if (!url) return;
     errorEl.style.display = 'none';
     resultEl.style.display = 'none';
+    driveStatus.textContent = '';
+
+    const source = detectSource(url);
+    if (source === 'spotify') {
+      errorEl.textContent = "Spotify doesn't allow extracting episode audio outside their app - there's no public link or API that resolves to a downloadable file. Try the same episode's Apple Podcasts link instead (most shows are on both).";
+      errorEl.style.display = 'block';
+      return;
+    }
+
     fetchBtn.disabled = true;
-    statusEl.textContent = 'Fetching transcript...';
     try {
-      const res = await fetch('/api/transcript', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Unknown error');
-      lastData = data;
-      metaEl.textContent = data.title + (data.isAutoGenerated ? ' (auto-generated captions)' : '') + ' — ' + data.segments.length + ' segments';
+      if (source === 'applepodcasts') {
+        statusEl.textContent = 'Finding the episode...';
+        const startRes = await fetch('/api/podcast/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const startData = await startRes.json();
+        if (!startRes.ok) throw new Error(startData.error || 'Unknown error');
+
+        const finished = await pollPodcastStatus(startData.transcriptId);
+        lastData = { title: startData.title, segments: finished.segments, isAutoGenerated: false };
+        metaEl.textContent = (startData.showTitle ? startData.showTitle + ' — ' : '') + startData.title + ' — ' + finished.segments.length + ' segments';
+      } else {
+        statusEl.textContent = 'Fetching transcript...';
+        const res = await fetch('/api/transcript', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unknown error');
+        lastData = data;
+        metaEl.textContent = data.title + (data.isAutoGenerated ? ' (auto-generated captions)' : '') + ' — ' + data.segments.length + ' segments';
+      }
       render();
       resultEl.style.display = 'block';
       statusEl.textContent = '';
-      driveStatus.textContent = '';
+      // Auto-save to Drive right away - by the time you're looking at the
+      // transcript, it's already backed up, no extra tap needed. Silently
+      // no-ops (via saveToDrive's own error text) if Drive isn't connected.
+      saveToDrive();
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.style.display = 'block';
@@ -433,7 +762,7 @@ const PAGE_HTML = `<!doctype html>
     URL.revokeObjectURL(a.href);
   });
 
-  saveDriveBtn.addEventListener('click', async () => {
+  async function saveToDrive() {
     if (!lastData) return;
     const safeTitle = (lastData.title || 'transcript').replace(/[^a-z0-9]+/gi, '-').slice(0, 60);
     saveDriveBtn.disabled = true;
@@ -446,13 +775,15 @@ const PAGE_HTML = `<!doctype html>
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error');
-      driveStatus.innerHTML = 'Saved to Drive — <a href="' + data.link + '" target="_blank" rel="noopener">open file</a>';
+      driveStatus.innerHTML = 'Saved to Drive as a .txt file — <a href="' + data.link + '" target="_blank" rel="noopener">open file</a>';
     } catch (err) {
       driveStatus.textContent = 'Drive save failed: ' + err.message;
     } finally {
       saveDriveBtn.disabled = false;
     }
-  });
+  }
+
+  saveDriveBtn.addEventListener('click', saveToDrive);
 
   urlInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') fetchBtn.click();
