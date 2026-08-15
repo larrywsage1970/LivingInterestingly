@@ -270,8 +270,13 @@ async function handlePodcastStart(request, env) {
         "Podcast transcription isn't connected yet - set the ASSEMBLYAI_API_KEY Worker secret (see README's Podcast section)."
       );
     }
+    if (!env.PODCASTINDEX_API_KEY || !env.PODCASTINDEX_API_SECRET) {
+      return jsonError(
+        "Podcast episode lookup isn't connected yet - set the PODCASTINDEX_API_KEY and PODCASTINDEX_API_SECRET Worker secrets (see README's Podcast section)."
+      );
+    }
 
-    const episode = await resolvePodcastEpisode(podcastUrl);
+    const episode = await resolvePodcastEpisode(podcastUrl, env.PODCASTINDEX_API_KEY, env.PODCASTINDEX_API_SECRET);
     const transcriptId = await startAssemblyAITranscription(episode.audioUrl, env.ASSEMBLYAI_API_KEY);
 
     return new Response(
@@ -320,180 +325,124 @@ async function handlePodcastStatus(request, env) {
 }
 
 // Apple Podcasts episode links look like:
-//   https://podcasts.apple.com/us/podcast/show-name/id1200361736?i=1000552334455
+//   https://podcasts.apple.com/us/podcast/episode-title-slug/id1200361736?i=1000552334455
 // id1200361736 is the show's Apple "collection" id; i=... is the specific
-// episode's Apple "track" id. Both are needed - a link to just the show
-// (no `i` param) doesn't identify a single episode. The leading /us/ is
-// Apple's storefront country code - carried through to the lookup call
-// below, since the lookup API is unreliable without an explicit country.
+// episode's Apple "track" id (required - a link to just the show, no `i`
+// param, doesn't identify a single episode). The path segment between
+// "/podcast/" and "/id..." is *not* the show's name, it's a hyphenated,
+// sometimes-truncated version of the episode's own title - useful later for
+// matching, since Apple's iTunes API blocks Cloudflare Workers outright
+// (see below) and can't give us that title directly anymore.
 function parseApplePodcastsUrl(input) {
   try {
     const u = new URL(input.trim());
     if (!/(^|\.)podcasts\.apple\.com$/i.test(u.hostname)) return null;
-    const countryMatch = u.pathname.match(/^\/([a-z]{2})\//i);
-    const country = countryMatch ? countryMatch[1].toUpperCase() : "US";
-    const collectionMatch = u.pathname.match(/\/id(\d+)/);
-    const collectionId = collectionMatch ? collectionMatch[1] : null;
+    const collectionMatch = u.pathname.match(/\/podcast\/([^/]+)\/id(\d+)/);
+    if (!collectionMatch) return null;
+    const titleSlug = collectionMatch[1];
+    const collectionId = collectionMatch[2];
     const episodeId = u.searchParams.get("i");
-    if (!collectionId) return null;
-    return { collectionId, episodeId, country };
+    return { collectionId, episodeId, titleSlug };
   } catch {
     return null;
   }
 }
 
-// Looking up a single episode directly by its track id
-// (entity=podcastEpisode&id=<episodeId>) is unreliable in practice - Apple's
-// directory frequently returns zero results for real, valid episode ids.
-// The reliable path (confirmed against Apple's own developer forums, since
-// this entity type isn't in their official docs) is looking up the *show*
-// with media=podcast&entity=podcastEpisode - which returns the show itself
-// as results[0] plus its ~200 most recent episodes as results[1..] - then
-// matching by track id within that list. Both `media=podcast` and
-// `country` are required for reliable results; entity alone isn't enough.
-async function itunesLookupShowWithEpisodes(collectionId, country) {
-  const res = await fetch(
-    `https://itunes.apple.com/lookup?id=${encodeURIComponent(collectionId)}&country=${encodeURIComponent(country)}&media=podcast&entity=podcastEpisode&limit=200`,
-    // Apple's lookup API can otherwise reject requests from datacenter IPs
-    // (Cloudflare Workers included) - same class of issue as the YouTube
-    // fetches below, worked around the same way with a real User-Agent.
-    { headers: { "User-Agent": USER_AGENT } }
-  );
-  if (!res.ok) {
-    const bodySnippet = (await res.text().catch(() => "")).slice(0, 200);
-    throw new Error(`Apple's lookup API returned HTTP ${res.status}${bodySnippet ? ` - ${bodySnippet}` : ""}.`);
-  }
-  const data = await res.json().catch(() => null);
-  if (!data?.results?.length) {
-    throw new Error(
-      `Apple's podcast directory returned no results for that show (HTTP ${res.status}, empty result set).`
-    );
-  }
-  return data.results;
+// Apple's own iTunes lookup API (itunes.apple.com) returns a bare HTTP 403
+// on every request from Cloudflare Workers - confirmed live, not just a
+// missing-header issue (a real browser User-Agent didn't help either), so
+// it looks like Apple blocks Workers' IP ranges outright rather than doing
+// per-request bot detection. PodcastIndex.org is used instead: a
+// third-party podcast database built for exactly this kind of API access
+// (unlike Apple's, which isn't really meant for third-party use), and it
+// returns each episode's enclosure (audio) URL directly - no separate RSS
+// fetch needed either. Requires a free PODCASTINDEX_API_KEY/_SECRET pair.
+const PODCASTINDEX_BASE = "https://api.podcastindex.org/api/1.0";
+
+async function podcastIndexAuthHeaders(apiKey, apiSecret) {
+  const apiHeaderTime = Math.floor(Date.now() / 1000).toString();
+  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(apiKey + apiSecret + apiHeaderTime));
+  const hashHex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return {
+    "User-Agent": USER_AGENT,
+    "X-Auth-Key": apiKey,
+    "X-Auth-Date": apiHeaderTime,
+    Authorization: hashHex,
+  };
 }
 
-// Resolves an Apple Podcasts episode link to its actual audio file URL.
-// Fast path: Apple's episode listing sometimes includes the audio URL
-// directly. Fallback: look up the show's RSS feed and match this episode
-// inside it by title/release date, then read the <enclosure> URL - the same
-// technique most third-party podcast apps use, since Apple's directory
-// itself is just an index over each show's own RSS feed.
-async function resolvePodcastEpisode(inputUrl) {
+async function podcastIndexEpisodesByItunesId(collectionId, apiKey, apiSecret) {
+  const headers = await podcastIndexAuthHeaders(apiKey, apiSecret);
+  const res = await fetch(`${PODCASTINDEX_BASE}/episodes/byitunesid?id=${encodeURIComponent(collectionId)}&max=1000`, {
+    headers,
+  });
+  if (!res.ok) {
+    const bodySnippet = (await res.text().catch(() => "")).slice(0, 200);
+    throw new Error(`PodcastIndex lookup returned HTTP ${res.status}${bodySnippet ? ` - ${bodySnippet}` : ""}.`);
+  }
+  const data = await res.json().catch(() => null);
+  if (!data?.items?.length) {
+    throw new Error("PodcastIndex doesn't have any episodes indexed for that show.");
+  }
+  return data.items;
+}
+
+function normalizeSlugWords(s) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// Apple's URL slug is a hyphenated version of the episode title, sometimes
+// truncated - so either the slug or the real title could be the shorter,
+// prefix-matching one. Exact match first, then prefix-either-way, then
+// substantial containment as a last resort.
+function matchEpisodeBySlug(items, titleSlug) {
+  const target = normalizeSlugWords(titleSlug);
+  if (!target) return null;
+
+  const exact = items.find((it) => normalizeSlugWords(it.title) === target);
+  if (exact) return exact;
+
+  const prefixMatch = items.find((it) => {
+    const t = normalizeSlugWords(it.title);
+    return t.startsWith(target) || target.startsWith(t);
+  });
+  if (prefixMatch) return prefixMatch;
+
+  return (
+    items.find((it) => {
+      const t = normalizeSlugWords(it.title);
+      return t.includes(target) || target.includes(t);
+    }) || null
+  );
+}
+
+// Resolves an Apple Podcasts episode link to its actual audio file URL via
+// PodcastIndex, matching the specific episode by its URL-slug title (see
+// parseApplePodcastsUrl) since PodcastIndex's episode objects don't carry
+// Apple's own per-episode track id.
+async function resolvePodcastEpisode(inputUrl, apiKey, apiSecret) {
   const parsed = parseApplePodcastsUrl(inputUrl);
   if (!parsed) {
     throw new Error(
       "Couldn't recognize that as an Apple Podcasts link. Paste a link from the Apple Podcasts app or podcasts.apple.com (Share > Copy Link on the episode)."
     );
   }
-  const { collectionId, episodeId, country } = parsed;
+  const { collectionId, episodeId, titleSlug } = parsed;
   if (!episodeId) {
     throw new Error("That looks like a link to the show, not a specific episode. Open the episode itself, then Share > Copy Link.");
   }
 
-  const results = await itunesLookupShowWithEpisodes(collectionId, country);
-  const showMeta = results[0];
-  const episodeMeta = results.slice(1).find((r) => String(r.trackId) === String(episodeId));
-
-  if (!episodeMeta) {
-    // Apple's episode listing only covers the ~200 most recent episodes, so
-    // older back-catalog episodes land here with no title/date to match on -
-    // no point fetching the RSS feed, there's nothing to match against.
-    throw new Error(
-      `That episode isn't in "${showMeta.collectionName}"'s recent-episodes list from Apple (older back-catalog episodes beyond the most recent ~200 aren't supported yet).`
-    );
+  const items = await podcastIndexEpisodesByItunesId(collectionId, apiKey, apiSecret);
+  const match = matchEpisodeBySlug(items, titleSlug);
+  if (!match) {
+    throw new Error(`Found this show on PodcastIndex but couldn't confidently match this episode by title inside it.`);
   }
 
-  if (episodeMeta.episodeUrl) {
-    return {
-      audioUrl: episodeMeta.episodeUrl,
-      title: episodeMeta.trackName || "Untitled episode",
-      showTitle: showMeta.collectionName || "",
-    };
-  }
-
-  if (!showMeta.feedUrl) {
-    throw new Error("Couldn't find this show's RSS feed via Apple's directory.");
-  }
-  const rssRes = await fetch(showMeta.feedUrl, { headers: { "User-Agent": USER_AGENT } });
-  if (!rssRes.ok) {
-    throw new Error(`Couldn't fetch the show's RSS feed (HTTP ${rssRes.status}).`);
-  }
-  const items = parseRssItems(await rssRes.text());
-
-  // Apple knows this episode's title/release date even without a direct
-  // audio URL for it - use those to match it into the feed.
-  const match = matchEpisodeInFeed(items, episodeMeta.trackName, episodeMeta.releaseDate);
-  if (match) {
-    return {
-      audioUrl: match.enclosureUrl,
-      title: episodeMeta.trackName || match.title || "Untitled episode",
-      showTitle: showMeta.collectionName || "",
-    };
-  }
-  throw new Error(`Found "${showMeta.collectionName}"'s feed but couldn't confidently match "${episodeMeta.trackName}" inside it.`);
-}
-
-function parseRssItems(xml) {
-  const items = [];
-  const itemRe = /<item\b[^>]*>([\s\S]*?)<\/item>/g;
-  let m;
-  while ((m = itemRe.exec(xml)) !== null) {
-    const block = m[1];
-    const enclosureMatch = block.match(/<enclosure\b[^>]*\burl="([^"]+)"[^>]*\/?>/i);
-    if (!enclosureMatch) continue; // no audio in this item, nothing to match against
-    items.push({
-      title: decodeEntities(extractRssTag(block, "title") || "").trim(),
-      pubDate: extractRssTag(block, "pubDate"),
-      enclosureUrl: decodeEntities(enclosureMatch[1]),
-    });
-  }
-  return items;
-}
-
-// Handles both `<title>Text</title>` and `<title><![CDATA[Text]]></title>`.
-function extractRssTag(block, tag) {
-  const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
-  const m = block.match(re);
-  if (!m) return null;
-  const raw = m[1].trim();
-  const cdata = raw.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
-  return cdata ? cdata[1] : raw;
-}
-
-function normalizeEpisodeTitle(s) {
-  return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function matchEpisodeInFeed(items, targetTitle, targetReleaseDate) {
-  const normTarget = normalizeEpisodeTitle(targetTitle);
-
-  const exact = items.find((it) => normTarget && normalizeEpisodeTitle(it.title) === normTarget);
-  if (exact) return exact;
-
-  // No exact title match - narrow by release date first (within 3 days, to
-  // allow for feed-vs-directory timezone/republish drift), then prefer
-  // whichever of those has the closest title.
-  const targetTime = targetReleaseDate ? Date.parse(targetReleaseDate) : NaN;
-  if (!isNaN(targetTime)) {
-    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-    const nearInTime = items
-      .map((it) => ({ it, dt: Date.parse(it.pubDate) }))
-      .filter(({ dt }) => !isNaN(dt) && Math.abs(dt - targetTime) <= THREE_DAYS_MS)
-      .sort((a, b) => Math.abs(a.dt - targetTime) - Math.abs(b.dt - targetTime));
-    if (nearInTime.length) {
-      const titleish = nearInTime.find(
-        ({ it }) => normTarget && (normalizeEpisodeTitle(it.title).includes(normTarget) || normTarget.includes(normalizeEpisodeTitle(it.title)))
-      );
-      return (titleish || nearInTime[0]).it;
-    }
-  }
-
-  // Last resort: partial title containment, no usable date to lean on.
-  return (
-    items.find(
-      (it) => normTarget && (normalizeEpisodeTitle(it.title).includes(normTarget) || normTarget.includes(normalizeEpisodeTitle(it.title)))
-    ) || null
-  );
+  return {
+    audioUrl: match.enclosureUrl,
+    title: match.title || "Untitled episode",
+    showTitle: match.feedTitle || "",
+  };
 }
 
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
