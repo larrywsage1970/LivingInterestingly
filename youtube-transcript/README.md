@@ -28,6 +28,16 @@ does the audio fetch *and* transcription entirely on their own servers. The
 Worker's job stays lightweight either way: resolve a link to a URL, hand it
 off, poll for a result. It never touches the podcast audio bytes directly.
 
+Episode *resolution* (Apple Podcasts link → actual audio file URL) works the
+same way for the same reason, but through
+[PodcastIndex.org](https://podcastindex.org/) rather than Apple directly —
+Apple's own iTunes lookup API returns a bare HTTP 403 on every request from
+Cloudflare Workers (confirmed live: it's not a missing-header issue, a real
+browser User-Agent didn't help either — this looks like Apple blocking
+Workers' IP ranges outright). PodcastIndex is a third-party podcast
+database built for exactly this kind of API access, so it doesn't have that
+problem, and it can look up an episode from Apple's own show ID directly.
+
 ## One-time setup (from a computer)
 
 Deploy via Cloudflare's **Git integration** so the Worker auto-deploys every
@@ -57,10 +67,12 @@ Paste an Apple Podcasts **episode** link (open the episode in the app or at
 podcasts.apple.com, then Share > Copy Link — needs the `?i=...` episode ID
 in the URL, not just a link to the show) and the Worker will:
 
-1. Resolve that link to the episode's actual audio file, via Apple's iTunes
-   lookup API and, if needed, the show's own RSS feed (same technique most
-   third-party podcast apps use — Apple's directory is just an index over
-   each show's RSS feed).
+1. Resolve that link to the episode's actual audio file: PodcastIndex looks
+   up the show directly from Apple's own show ID (no separate feed-lookup
+   step needed), then the specific episode is matched by title against
+   Apple's URL slug (the hyphenated text between `/podcast/` and `/id...`
+   in the link *is* the episode's title, truncated) — since PodcastIndex's
+   episode data doesn't carry Apple's own per-episode ID.
 2. Hand that audio URL to [AssemblyAI](https://www.assemblyai.com/) to
    transcribe. Unlike YouTube, most podcasts don't publish existing
    captions, so this is real speech-to-text, not caption-fetching.
@@ -75,23 +87,24 @@ it. If a show is on both, use its Apple Podcasts link instead.
 ### Setup
 
 1. Sign up at [assemblyai.com](https://www.assemblyai.com/) and grab an API
-   key from their dashboard (they have a free usage tier, then pay-as-you-go
-   per hour of audio transcribed).
-2. Add it via Cloudflare's **Secrets Store** (Workers & Pages → Secrets
-   Store → Create secret), named `ASSEMBLYAI_API_KEY`. Note the Store ID
+   key from their dashboard (free usage tier, then pay-as-you-go per hour of
+   audio transcribed).
+2. Sign up at [api.podcastindex.org](https://api.podcastindex.org/) (free)
+   and grab an **API key** and **API secret** — you need both, they're
+   different from each other.
+3. Add all three as secrets via Cloudflare's **Secrets Store** (Workers &
+   Pages → Secrets Store → Create secret): `ASSEMBLYAI_API_KEY`,
+   `PODCASTINDEX_API_KEY`, `PODCASTINDEX_API_SECRET`. Note the Store ID
    shown on that page.
-3. Bind it to this Worker so `wrangler.toml`'s `[[secrets_store_secrets]]`
-   block picks it up automatically on every deploy (see the `store_id` in
-   that file — update it if your Store ID differs). This is the part that
-   matters: secrets added only through the Worker's own Settings/Bindings
-   pages by hand were found (the hard way) to not reliably survive the next
-   git-triggered deploy — declaring the binding in `wrangler.toml` instead
-   keeps it version-controlled and re-applied on every deploy, not just
-   whichever deploy happened to be live when you clicked "Add" in the
-   dashboard.
-4. That's it — no other config needed. If the secret isn't set, Apple
-   Podcasts links just return a clear "not connected yet" message instead of
-   breaking the app; YouTube links work regardless.
+4. Confirm `wrangler.toml`'s `[[secrets_store_secrets]]` block has an entry
+   for each with the matching `store_id` (update it if your Store ID
+   differs) — this is what makes the bindings survive every future deploy
+   automatically. Secrets added only through the Worker's own
+   Settings/Bindings pages by hand were found (the hard way) to *not*
+   reliably survive the next git-triggered deploy.
+5. That's it — no other config needed. If a secret isn't set, Apple
+   Podcasts links just return a clear "not connected yet" message naming
+   which one, instead of breaking the app; YouTube links work regardless.
 
 ## Connecting Google Drive (auto-save transcripts as .txt)
 
@@ -183,12 +196,16 @@ on mobile) with a prompt like:
   to a downloadable audio file for Spotify-hosted episodes. Use the same
   episode's Apple Podcasts link instead.
 - Needs a **specific episode** link (with `?i=...`), not a show link.
-- Episode matching (when Apple's directory doesn't hand back a direct audio
-  URL) relies on title/release-date matching against the show's RSS feed —
-  reliable for the vast majority of shows, but a show with wildly
-  inconsistent titles between Apple's directory and its own feed could
-  occasionally mismatch. If that happens, it fails with a clear "couldn't
-  confidently match" error rather than silently transcribing the wrong
+- The show has to be indexed by PodcastIndex.org — the vast majority of
+  public podcasts are (it's a large, long-running open podcast database),
+  but a brand-new or very obscure show could occasionally not be found
+  there yet.
+- Episode matching relies on comparing Apple's URL slug (a hyphenated,
+  sometimes-truncated version of the episode title baked into the link
+  itself) against PodcastIndex's episode titles for that show — reliable in
+  practice, but a show with very repetitive or near-duplicate episode
+  titles could occasionally mismatch. If no confident match is found, it
+  fails with a clear error rather than silently transcribing the wrong
   episode.
 - Transcription costs real money per hour of audio (AssemblyAI's pricing,
   paid by you via your own API key) and takes real wall-clock time — a

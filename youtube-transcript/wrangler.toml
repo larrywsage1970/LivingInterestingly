@@ -23,3 +23,13 @@ secret_name = "APPS_SCRIPT_URL"
 binding = "APPS_SCRIPT_TOKEN"
 store_id = "51e50219e2f045c38a0b4956ae04726c"
 secret_name = "APPS_SCRIPT_TOKEN"
+
+[[secrets_store_secrets]]
+binding = "PODCASTINDEX_API_KEY"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "PODCASTINDEX_API_KEY"
+
+[[secrets_store_secrets]]
+binding = "PODCASTINDEX_API_SECRET"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "PODCASTINDEX_API_SECRET"
