@@ -1,12 +1,17 @@
 /**
- * Google Apps Script "Drive bridge" for the YouTube Transcript Extractor.
+ * Google Apps Script "Drive bridge" for the Transcript Extractor.
  *
  * Deploy this as a Web App (Execute as: Me, Access: Anyone) at
  * script.google.com. It runs under YOUR Google identity, so it can write to
  * your Drive with no OAuth client, consent screen, or verification step -
- * the Cloudflare Worker just POSTs transcript text here and this creates a
- * Google Doc from it in a Drive folder. Google Docs' own File > Download
- * covers exporting to PDF/Word/plain text/etc. from there.
+ * the Cloudflare Worker POSTs transcript text here and this drops it into a
+ * Drive folder as a plain .txt file (not a Google Doc), so it's already in
+ * the format most note-taking/blog/podcast tools expect to import, no
+ * File > Download conversion step needed first.
+ *
+ * The Worker calls this automatically right after a transcript finishes
+ * (YouTube or podcast), not on a separate button press - by the time you
+ * see the transcript on your phone, it's already in Drive.
  *
  * Guarded by SHARED_SECRET since "Anyone with the link" can technically call
  * this URL - set it below, and set the matching value as the Worker's
@@ -15,7 +20,7 @@
  */
 
 const SHARED_SECRET = 'REPLACE_WITH_A_LONG_RANDOM_STRING';
-const FOLDER_NAME = 'YouTube Transcripts';
+const FOLDER_NAME = 'Transcripts';
 
 function doPost(e) {
   try {
@@ -28,18 +33,10 @@ function doPost(e) {
     }
     const folder = getOrCreateFolder(FOLDER_NAME);
 
-    // Create as a real Google Doc (not a plain .txt file) so it opens
-    // straight into Docs, and File > Download there covers PDF/Word/etc.
-    // for whatever tool the transcript ends up feeding.
-    const doc = DocumentApp.create(body.filename);
-    doc.getBody().setText(body.text);
-    doc.saveAndClose();
+    const safeName = body.filename.endsWith('.txt') ? body.filename : body.filename + '.txt';
+    const file = folder.createFile(safeName, body.text, MimeType.PLAIN_TEXT);
 
-    const docFile = DriveApp.getFileById(doc.getId());
-    folder.addFile(docFile);
-    DriveApp.getRootFolder().removeFile(docFile); // Docs are created at Drive root by default; this re-parents into FOLDER_NAME
-
-    return jsonResponse({ fileId: doc.getId(), link: docFile.getUrl() });
+    return jsonResponse({ fileId: file.getId(), link: file.getUrl() });
   } catch (err) {
     return jsonResponse({ error: err.message });
   }

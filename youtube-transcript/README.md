@@ -1,9 +1,10 @@
-# YouTube Transcript Extractor
+# Transcript Extractor
 
-A tiny, self-contained web app: paste a YouTube link, get the transcript,
-copy or download it. Built for turning long-form videos into podcast/blog
-source material — get the transcript here, then hand it to an LLM (or your
-own eyes) to pull out key points and topics.
+A tiny, self-contained web app: paste a YouTube link *or* an Apple Podcasts
+episode link, get the transcript, copy or download it. Built for turning
+long-form videos and podcast episodes into blog/podcast source material —
+get the transcript here, then hand it to an LLM (or your own eyes) to pull
+out key points and topics.
 
 Everything — frontend and the fetch logic — lives in one file,
 `worker.js`, deployed as a [Cloudflare Worker](https://workers.cloudflare.com/).
@@ -19,6 +20,13 @@ possible version of "something": no server to patch or keep alive, it's
 just a URL that runs your code on request. You deploy it once (from a
 computer), and from then on it's *only* a URL — everything after that is
 phone-only, no laptop required.
+
+The podcast path fits the same "just a URL" model for a different reason:
+podcast transcription needs real speech-to-text, which is far more compute
+than a Worker can do itself — but AssemblyAI's API accepts a source URL and
+does the audio fetch *and* transcription entirely on their own servers. The
+Worker's job stays lightweight either way: resolve a link to a URL, hand it
+off, poll for a result. It never touches the podcast audio bytes directly.
 
 ## One-time setup (from a computer)
 
@@ -43,14 +51,54 @@ today, same pattern as other apps that build straight from GitHub.
    From now on, any push to `main` that touches this folder redeploys it
    automatically.
 
-## Connecting Google Drive (auto-save transcripts)
+## Podcast transcripts (Apple Podcasts)
 
-The **Save to Drive** button needs a small bridge script, because writing to
-someone's Drive normally requires a full Google OAuth client + consent
-screen (and Google's "unverified app" refresh tokens expire after 7 days —
-annoying for a personal tool). Using a Google Apps Script instead sidesteps
-all of that: it runs *as your own Google account*, so no OAuth dance, no
-verification, no expiry.
+Paste an Apple Podcasts **episode** link (open the episode in the app or at
+podcasts.apple.com, then Share > Copy Link — needs the `?i=...` episode ID
+in the URL, not just a link to the show) and the Worker will:
+
+1. Resolve that link to the episode's actual audio file, via Apple's iTunes
+   lookup API and, if needed, the show's own RSS feed (same technique most
+   third-party podcast apps use — Apple's directory is just an index over
+   each show's RSS feed).
+2. Hand that audio URL to [AssemblyAI](https://www.assemblyai.com/) to
+   transcribe. Unlike YouTube, most podcasts don't publish existing
+   captions, so this is real speech-to-text, not caption-fetching.
+3. Poll until it's done (a few minutes for a full episode is normal) and
+   show the transcript exactly like the YouTube path does.
+
+**Spotify links are not supported and never will be** — Spotify has no
+public API or link that resolves to a downloadable audio file; podcast
+audio is served through their app's own DRM'd streaming with no way around
+it. If a show is on both, use its Apple Podcasts link instead.
+
+### Setup
+
+1. Sign up at [assemblyai.com](https://www.assemblyai.com/) and grab an API
+   key from their dashboard (they have a free usage tier, then pay-as-you-go
+   per hour of audio transcribed).
+2. Add it as a Worker secret: Cloudflare dashboard → this Worker → Settings
+   → Variables and Secrets → add `ASSEMBLYAI_API_KEY`, or
+   `npx wrangler secret put ASSEMBLYAI_API_KEY` from this folder if you're
+   using the CLI alongside Git deploys.
+3. That's it — no other config. If the secret isn't set, Apple Podcasts
+   links just return a clear "not connected yet" message instead of
+   breaking the app; YouTube links work regardless.
+
+## Connecting Google Drive (auto-save transcripts as .txt)
+
+As soon as a transcript finishes — YouTube or podcast — the app saves it to
+your Drive automatically as a plain **.txt file**, no button press needed;
+by the time you're looking at the transcript on your phone, it's already
+backed up. (A **Save to Drive again** button stays in the UI too, for a
+manual retry if the auto-save happened to fail.)
+
+This needs a small bridge script, because writing to someone's Drive
+normally requires a full Google OAuth client + consent screen (and Google's
+"unverified app" refresh tokens expire after 7 days — annoying for a
+personal tool). Using a Google Apps Script instead sidesteps all of that: it
+runs *as your own Google account*, so no OAuth dance, no verification, no
+expiry.
 
 1. Go to [script.google.com](https://script.google.com) → **New project**.
 2. Delete the placeholder code, paste in the contents of
@@ -72,33 +120,30 @@ verification, no expiry.
    - `APPS_SCRIPT_URL` — the `/exec` URL from step 4.
    - `APPS_SCRIPT_TOKEN` — the same random string you put in `SHARED_SECRET`.
 6. That's it — no folder ID to configure. The script creates a
-   **"YouTube Transcripts"** folder in your Drive the first time it runs and
-   reuses it after. Move, rename, or nest that folder however you like from
-   Drive itself later; the script always finds it by name.
+   **"Transcripts"** folder in your Drive the first time it runs and reuses
+   it after. Move, rename, or nest that folder however you like from Drive
+   itself later; the script always finds it by name.
 
-Each save creates a real **Google Doc** (not a plain-text file), so it opens
-straight into Docs for editing, and Docs' own **File → Download** covers
-exporting to PDF, Word (.docx), or plain text — whatever format the next
-tool in your podcast/blog workflow actually needs.
-
-If you skip this section, the app still works fine — the **Save to Drive**
-button will just report Drive isn't connected instead of failing anything
-else.
+If you skip this section, the app still works fine — transcripts just stay
+on-screen (copy/download still work) and the auto-save silently reports
+Drive isn't connected instead of failing anything else.
 
 ## Using it from your phone
 
 - Open that URL in your phone's browser.
 - **Add it to your home screen** (Safari: Share → Add to Home Screen;
   Chrome: ⋮ menu → Add to Home Screen) so it opens like an app.
-- Paste a YouTube link, tap **Get Transcript**.
+- Paste a YouTube link or an Apple Podcasts episode link, tap **Get
+  Transcript**. Podcast episodes take real time to transcribe (a status line
+  shows elapsed seconds) — YouTube captions come back almost instantly.
 - Toggle **Show timestamps** if you want `[mm:ss]` markers instead of clean
   running text.
 - **Copy** puts it straight on your clipboard to paste into Google Docs,
   Notes, Notion, wherever you're drafting. **Download .txt** saves a file
   instead, if your workflow wants a file rather than clipboard text.
-  **Save to Drive** (once connected — see above) drops it straight into your
-  "YouTube Transcripts" Drive folder, so you can just leave the tab and pick
-  it up later from Drive on any device.
+- **Drive** (once connected — see above): happens automatically the moment
+  the transcript is ready, as a .txt file in your "Transcripts" folder — no
+  tap needed. Leave the tab, pick it up later from Drive on any device.
 
 ## Pulling out key points and topics
 
@@ -114,6 +159,7 @@ on mobile) with a prompt like:
 
 ## Limitations
 
+**YouTube:**
 - Only works for videos that have **captions available** — either
   creator-uploaded or YouTube's auto-generated ones. No captions, no
   transcript.
@@ -123,6 +169,22 @@ on mobile) with a prompt like:
   whatever's first in the video's caption list. The API response includes
   `availableLanguages` if you want to extend the UI with a language picker
   later.
+
+**Podcasts:**
+- **Spotify links don't work, full stop** — no public API or link resolves
+  to a downloadable audio file for Spotify-hosted episodes. Use the same
+  episode's Apple Podcasts link instead.
+- Needs a **specific episode** link (with `?i=...`), not a show link.
+- Episode matching (when Apple's directory doesn't hand back a direct audio
+  URL) relies on title/release-date matching against the show's RSS feed —
+  reliable for the vast majority of shows, but a show with wildly
+  inconsistent titles between Apple's directory and its own feed could
+  occasionally mismatch. If that happens, it fails with a clear "couldn't
+  confidently match" error rather than silently transcribing the wrong
+  episode.
+- Transcription costs real money per hour of audio (AssemblyAI's pricing,
+  paid by you via your own API key) and takes real wall-clock time — a
+  60-minute episode is not an instant response.
 - This scrapes YouTube's public watch-page data (the same technique used by
   most open-source YouTube transcript tools, e.g. `youtube-transcript-api`).
   YouTube doesn't publish this as a stable API, so if they change their page
