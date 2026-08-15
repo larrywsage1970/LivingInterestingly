@@ -353,11 +353,23 @@ function parseApplePodcastsUrl(input) {
 // `country` are required for reliable results; entity alone isn't enough.
 async function itunesLookupShowWithEpisodes(collectionId, country) {
   const res = await fetch(
-    `https://itunes.apple.com/lookup?id=${encodeURIComponent(collectionId)}&country=${encodeURIComponent(country)}&media=podcast&entity=podcastEpisode&limit=200`
+    `https://itunes.apple.com/lookup?id=${encodeURIComponent(collectionId)}&country=${encodeURIComponent(country)}&media=podcast&entity=podcastEpisode&limit=200`,
+    // Apple's lookup API can otherwise reject requests from datacenter IPs
+    // (Cloudflare Workers included) - same class of issue as the YouTube
+    // fetches below, worked around the same way with a real User-Agent.
+    { headers: { "User-Agent": USER_AGENT } }
   );
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const bodySnippet = (await res.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Apple's lookup API returned HTTP ${res.status}${bodySnippet ? ` - ${bodySnippet}` : ""}.`);
+  }
   const data = await res.json().catch(() => null);
-  return data?.results?.length ? data.results : null;
+  if (!data?.results?.length) {
+    throw new Error(
+      `Apple's podcast directory returned no results for that show (HTTP ${res.status}, empty result set).`
+    );
+  }
+  return data.results;
 }
 
 // Resolves an Apple Podcasts episode link to its actual audio file URL.
@@ -379,9 +391,6 @@ async function resolvePodcastEpisode(inputUrl) {
   }
 
   const results = await itunesLookupShowWithEpisodes(collectionId, country);
-  if (!results) {
-    throw new Error("Apple's podcast directory doesn't recognize that show.");
-  }
   const showMeta = results[0];
   const episodeMeta = results.slice(1).find((r) => String(r.trackId) === String(episodeId));
 
