@@ -406,10 +406,42 @@ function normalizeSlugWords(s) {
   return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-// Apple's URL slug is a hyphenated version of the episode title, sometimes
-// truncated - so either the slug or the real title could be the shorter,
-// prefix-matching one. Exact match first, then prefix-either-way, then
-// substantial containment as a last resort.
+// Common short/filler words excluded from matching - left in, they can
+// coincidentally overlap between two completely unrelated episode titles
+// and dilute the score away from the words that actually distinguish one
+// episode from another.
+const SLUG_STOPWORDS = new Set([
+  "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "with",
+  "is", "are", "was", "were", "this", "that", "these", "those", "who",
+  "what", "how", "why", "most", "have", "has", "you", "your", "it", "its",
+]);
+
+function slugWordSet(s) {
+  return new Set(
+    normalizeSlugWords(s)
+      .split(" ")
+      .filter((w) => w.length > 2 && !SLUG_STOPWORDS.has(w))
+  );
+}
+
+// Apple's URL slug is a hyphenated version of the episode title, but it's
+// not always a clean prefix/substring match against the real title text -
+// it can be truncated mid-word, drop small words, or the RSS/PodcastIndex
+// title can differ slightly in wording or subtitle formatting from what
+// Apple shows in its own app. Word-overlap scoring (order-independent,
+// stopwords excluded) is far more tolerant of that than literal
+// prefix/substring matching, while a high threshold still avoids
+// confidently picking the wrong episode.
+//
+// Score is normalized against the *smaller* word set (slug vs. candidate)
+// rather than their union, on purpose: Apple's slug is frequently a genuine
+// truncation of a longer real title, so a candidate having extra words
+// beyond the slug is the normal case, not a red flag, and shouldn't be
+// penalized the way it would be under plain Jaccard similarity. The
+// tradeoff: two real episodes whose titles differ only by a short suffix
+// (e.g. "...For Kids") could occasionally be indistinguishable from the
+// slug alone - accepted as a rare edge case in exchange for truncation
+// tolerance on the much more common case.
 function matchEpisodeBySlug(items, titleSlug) {
   const target = normalizeSlugWords(titleSlug);
   if (!target) return null;
@@ -417,18 +449,25 @@ function matchEpisodeBySlug(items, titleSlug) {
   const exact = items.find((it) => normalizeSlugWords(it.title) === target);
   if (exact) return exact;
 
-  const prefixMatch = items.find((it) => {
-    const t = normalizeSlugWords(it.title);
-    return t.startsWith(target) || target.startsWith(t);
-  });
-  if (prefixMatch) return prefixMatch;
+  const targetWords = slugWordSet(titleSlug);
+  if (targetWords.size === 0) return null;
 
-  return (
-    items.find((it) => {
-      const t = normalizeSlugWords(it.title);
-      return t.includes(target) || target.includes(t);
-    }) || null
-  );
+  let best = null;
+  let bestScore = 0;
+  for (const it of items) {
+    const words = slugWordSet(it.title);
+    if (words.size === 0) continue;
+    let overlap = 0;
+    for (const w of targetWords) if (words.has(w)) overlap++;
+    // Normalized against the smaller word set, since the slug is often a
+    // truncated subset of the real title (or occasionally the reverse).
+    const score = overlap / Math.min(targetWords.size, words.size);
+    if (score > bestScore) {
+      bestScore = score;
+      best = it;
+    }
+  }
+  return bestScore >= 0.7 ? best : null;
 }
 
 // Resolves an Apple Podcasts episode link to its actual audio file URL via
