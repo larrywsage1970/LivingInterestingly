@@ -26,11 +26,15 @@
  * served through their app's own DRM'd streaming), so there's no way to get
  * from a Spotify link to something AssemblyAI (or anything else) can fetch.
  *
- * POST /api/save-to-drive { filename, text } optionally relays a transcript
- * to a small Google Apps Script "bridge" (see README) which drops it into a
- * Google Drive folder. Configured via the APPS_SCRIPT_URL and
- * APPS_SCRIPT_TOKEN Worker secrets - if unset, the button just reports
- * Drive isn't connected yet rather than failing the whole app.
+ * GET /api/drive-config hands the browser the Apps Script URL + token (see
+ * README's Drive section) so it can POST a transcript to the Google Apps
+ * Script "bridge" directly, saving it into a Drive folder as a .txt file.
+ * This one deliberately happens browser-side, not through the Worker:
+ * Google's front-door for script.google.com/exec rejects server-to-server
+ * requests as automated traffic (confirmed live - a real User-Agent header
+ * alone doesn't get past it), but real browser traffic goes through fine.
+ * If APPS_SCRIPT_URL/APPS_SCRIPT_TOKEN aren't set, /api/drive-config just
+ * reports { configured: false } instead of failing the whole app.
  */
 
 const USER_AGENT =
@@ -52,8 +56,8 @@ export default {
       return handlePodcastStatus(request, env);
     }
 
-    if (url.pathname === "/api/save-to-drive" && request.method === "POST") {
-      return handleSaveToDrive(request, env);
+    if (url.pathname === "/api/drive-config" && request.method === "GET") {
+      return handleDriveConfig(env);
     }
 
     if (url.pathname === "/" || url.pathname === "/index.html") {
@@ -66,57 +70,28 @@ export default {
   },
 };
 
-async function handleSaveToDrive(request, env) {
-  try {
-    // Secrets Store bindings are objects with an async .get() method, not
-    // plain strings - env.APPS_SCRIPT_URL itself is truthy even when unset,
-    // so the actual value has to be resolved before it can be checked.
-    const appsScriptUrl = await env.APPS_SCRIPT_URL?.get();
-    const appsScriptToken = await env.APPS_SCRIPT_TOKEN?.get();
-    if (!appsScriptUrl || !appsScriptToken) {
-      return jsonError(
-        "Google Drive isn't connected yet - set the APPS_SCRIPT_URL and APPS_SCRIPT_TOKEN Worker secrets (see README's Drive section)."
-      );
-    }
-    const { filename, text } = await request.json();
-    if (!text) return jsonError("No transcript text to save.");
-    const safeName = (filename || "transcript").replace(/[^a-z0-9\-_. ]+/gi, "-").slice(0, 120);
-
-    const res = await fetch(appsScriptUrl, {
-      method: "POST",
-      // A real browser User-Agent, same fix that worked around Apple's
-      // block earlier - Google's front-door for script.google.com/exec
-      // appears to challenge/reject requests that look server-to-server
-      // rather than from an actual browser (HTTP 403 with a bot-mitigation
-      // challenge page instead of running the script).
-      headers: { "content-type": "application/json", "User-Agent": USER_AGENT },
-      body: JSON.stringify({
-        token: appsScriptToken,
-        filename: safeName,
-        text,
-      }),
-      redirect: "follow",
-    });
-    // Apps Script sometimes answers with an HTML page instead of the
-    // script's own JSON (an auth/consent interstitial, a "function not
-    // found" error page, a Google-side error page) - read as text first and
-    // surface the real status + a snippet, instead of a generic JSON parse
-    // error that doesn't say what Google actually sent back.
-    const bodyText = await res.text();
-    let data;
-    try {
-      data = JSON.parse(bodyText);
-    } catch {
-      throw new Error(`Apps Script returned HTTP ${res.status} with a non-JSON response - ${bodyText.slice(0, 300)}`);
-    }
-    if (data.error) return jsonError(`Google Drive save failed: ${data.error}`);
-
-    return new Response(JSON.stringify({ link: data.link }), {
+// Google's front-door for script.google.com/exec rejects Worker-originated
+// (server-to-server) requests outright - HTTP 403 with a bot-mitigation
+// challenge page instead of running the script, unaffected by a real
+// User-Agent header (confirmed live: it needs an actual browser executing
+// JS to get past, not just a header a Worker can fake). So instead of the
+// Worker relaying the save, it hands the browser what it needs to POST to
+// Apps Script directly - real browser traffic doesn't trigger the
+// challenge. Trade-off: APPS_SCRIPT_URL and the shared secret token become
+// visible in the page's own network traffic (they have to be, for the
+// browser to make the call) - fine for a personal tool only you use, but
+// worth knowing if this ever became a shared/public deployment.
+async function handleDriveConfig(env) {
+  const appsScriptUrl = await env.APPS_SCRIPT_URL?.get();
+  const appsScriptToken = await env.APPS_SCRIPT_TOKEN?.get();
+  if (!appsScriptUrl || !appsScriptToken) {
+    return new Response(JSON.stringify({ configured: false }), {
       headers: { "content-type": "application/json" },
     });
-  } catch (err) {
-    return jsonError(`Drive save failed: ${err.message || err}`);
   }
+  return new Response(JSON.stringify({ configured: true, url: appsScriptUrl, token: appsScriptToken }), {
+    headers: { "content-type": "application/json" },
+  });
 }
 
 async function handleTranscriptRequest(request) {
@@ -818,19 +793,44 @@ const PAGE_HTML = `<!doctype html>
     URL.revokeObjectURL(a.href);
   });
 
+  // Google rejects this call when the Worker makes it server-side (looks
+  // like automated traffic to Apps Script's front-door), so the browser
+  // POSTs to Apps Script directly instead - real browser traffic isn't
+  // challenged the same way. /api/drive-config just hands over the URL and
+  // token needed to do that; fetched once and cached for the session.
+  let driveConfigPromise = null;
+  function getDriveConfig() {
+    if (!driveConfigPromise) driveConfigPromise = fetch('/api/drive-config').then((r) => r.json());
+    return driveConfigPromise;
+  }
+
   async function saveToDrive() {
     if (!lastData) return;
     const safeTitle = (lastData.title || 'transcript').replace(/[^a-z0-9]+/gi, '-').slice(0, 60);
     saveDriveBtn.disabled = true;
     driveStatus.textContent = 'Saving to Drive...';
     try {
-      const res = await fetch('/api/save-to-drive', {
+      const config = await getDriveConfig();
+      if (!config.configured) {
+        throw new Error("Google Drive isn't connected yet - set the APPS_SCRIPT_URL and APPS_SCRIPT_TOKEN Worker secrets (see README's Drive section).");
+      }
+      const res = await fetch(config.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: safeTitle, text: out.value })
+        // text/plain avoids a CORS preflight (Apps Script Web Apps don't
+        // handle OPTIONS requests) - Apps Script reads the raw body
+        // regardless of the declared content type, so JSON.parse on its
+        // side still works fine.
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: config.token, filename: safeTitle, text: out.value })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Unknown error');
+      const bodyText = await res.text();
+      let data;
+      try {
+        data = JSON.parse(bodyText);
+      } catch {
+        throw new Error('Apps Script returned a non-JSON response (HTTP ' + res.status + ')');
+      }
+      if (data.error) throw new Error(data.error);
       driveStatus.innerHTML = 'Saved to Drive as a .txt file — <a href="' + data.link + '" target="_blank" rel="noopener">open file</a>';
     } catch (err) {
       driveStatus.textContent = 'Drive save failed: ' + err.message;
