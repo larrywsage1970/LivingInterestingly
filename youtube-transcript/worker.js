@@ -84,7 +84,12 @@ async function handleSaveToDrive(request, env) {
 
     const res = await fetch(appsScriptUrl, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      // A real browser User-Agent, same fix that worked around Apple's
+      // block earlier - Google's front-door for script.google.com/exec
+      // appears to challenge/reject requests that look server-to-server
+      // rather than from an actual browser (HTTP 403 with a bot-mitigation
+      // challenge page instead of running the script).
+      headers: { "content-type": "application/json", "User-Agent": USER_AGENT },
       body: JSON.stringify({
         token: appsScriptToken,
         filename: safeName,
