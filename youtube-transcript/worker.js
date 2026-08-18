@@ -92,7 +92,18 @@ async function handleSaveToDrive(request, env) {
       }),
       redirect: "follow",
     });
-    const data = await res.json();
+    // Apps Script sometimes answers with an HTML page instead of the
+    // script's own JSON (an auth/consent interstitial, a "function not
+    // found" error page, a Google-side error page) - read as text first and
+    // surface the real status + a snippet, instead of a generic JSON parse
+    // error that doesn't say what Google actually sent back.
+    const bodyText = await res.text();
+    let data;
+    try {
+      data = JSON.parse(bodyText);
+    } catch {
+      throw new Error(`Apps Script returned HTTP ${res.status} with a non-JSON response - ${bodyText.slice(0, 300)}`);
+    }
     if (data.error) return jsonError(`Google Drive save failed: ${data.error}`);
 
     return new Response(JSON.stringify({ link: data.link }), {
