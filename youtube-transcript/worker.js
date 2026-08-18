@@ -68,7 +68,12 @@ export default {
 
 async function handleSaveToDrive(request, env) {
   try {
-    if (!env.APPS_SCRIPT_URL || !env.APPS_SCRIPT_TOKEN) {
+    // Secrets Store bindings are objects with an async .get() method, not
+    // plain strings - env.APPS_SCRIPT_URL itself is truthy even when unset,
+    // so the actual value has to be resolved before it can be checked.
+    const appsScriptUrl = await env.APPS_SCRIPT_URL?.get();
+    const appsScriptToken = await env.APPS_SCRIPT_TOKEN?.get();
+    if (!appsScriptUrl || !appsScriptToken) {
       return jsonError(
         "Google Drive isn't connected yet - set the APPS_SCRIPT_URL and APPS_SCRIPT_TOKEN Worker secrets (see README's Drive section)."
       );
@@ -77,11 +82,11 @@ async function handleSaveToDrive(request, env) {
     if (!text) return jsonError("No transcript text to save.");
     const safeName = (filename || "transcript").replace(/[^a-z0-9\-_. ]+/gi, "-").slice(0, 120);
 
-    const res = await fetch(env.APPS_SCRIPT_URL, {
+    const res = await fetch(appsScriptUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        token: env.APPS_SCRIPT_TOKEN,
+        token: appsScriptToken,
         filename: safeName,
         text,
       }),
@@ -265,19 +270,28 @@ async function handlePodcastStart(request, env) {
       );
     }
 
-    if (!env.ASSEMBLYAI_API_KEY) {
+    // Secrets Store bindings are objects with an async .get() method, not
+    // plain strings - env.ASSEMBLYAI_API_KEY itself is truthy even when
+    // unset, so the actual value has to be resolved before it can be
+    // checked (this was the actual cause of "invalid API key" errors from
+    // PodcastIndex even with correct secret values - the raw binding object
+    // was being sent as the header value instead of the real key).
+    const assemblyAiKey = await env.ASSEMBLYAI_API_KEY?.get();
+    if (!assemblyAiKey) {
       return jsonError(
         "Podcast transcription isn't connected yet - set the ASSEMBLYAI_API_KEY Worker secret (see README's Podcast section)."
       );
     }
-    if (!env.PODCASTINDEX_API_KEY || !env.PODCASTINDEX_API_SECRET) {
+    const podcastIndexKey = await env.PODCASTINDEX_API_KEY?.get();
+    const podcastIndexSecret = await env.PODCASTINDEX_API_SECRET?.get();
+    if (!podcastIndexKey || !podcastIndexSecret) {
       return jsonError(
         "Podcast episode lookup isn't connected yet - set the PODCASTINDEX_API_KEY and PODCASTINDEX_API_SECRET Worker secrets (see README's Podcast section)."
       );
     }
 
-    const episode = await resolvePodcastEpisode(podcastUrl, env.PODCASTINDEX_API_KEY, env.PODCASTINDEX_API_SECRET);
-    const transcriptId = await startAssemblyAITranscription(episode.audioUrl, env.ASSEMBLYAI_API_KEY);
+    const episode = await resolvePodcastEpisode(podcastUrl, podcastIndexKey, podcastIndexSecret);
+    const transcriptId = await startAssemblyAITranscription(episode.audioUrl, assemblyAiKey);
 
     return new Response(
       JSON.stringify({
@@ -297,11 +311,12 @@ async function handlePodcastStatus(request, env) {
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
     if (!id) return jsonError("Missing transcript id.");
-    if (!env.ASSEMBLYAI_API_KEY) {
+    const assemblyAiKey = await env.ASSEMBLYAI_API_KEY?.get();
+    if (!assemblyAiKey) {
       return jsonError("Podcast transcription isn't connected yet - set the ASSEMBLYAI_API_KEY Worker secret.");
     }
 
-    const data = await getAssemblyAIStatus(id, env.ASSEMBLYAI_API_KEY);
+    const data = await getAssemblyAIStatus(id, assemblyAiKey);
     if (data.status === "error") {
       return jsonError(data.error || "Transcription failed.");
     }
@@ -311,7 +326,7 @@ async function handlePodcastStatus(request, env) {
       });
     }
 
-    const paragraphs = await getAssemblyAIParagraphs(id, env.ASSEMBLYAI_API_KEY);
+    const paragraphs = await getAssemblyAIParagraphs(id, assemblyAiKey);
     return new Response(
       JSON.stringify({
         status: "completed",
