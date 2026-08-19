@@ -121,6 +121,13 @@ personal tool). Using a Google Apps Script instead sidesteps all of that: it
 runs *as your own Google account*, so no OAuth dance, no verification, no
 expiry.
 
+Your browser calls this script directly, not the Worker — Google's
+front-door for `script.google.com/exec` rejects Worker-originated requests
+outright as automated traffic, but real browser traffic goes through fine.
+The Worker's `GET /api/drive-config` just hands the browser the URL and
+token it needs to make that call itself (see the top-of-file comment in
+`worker.js` for more).
+
 1. Go to [script.google.com](https://script.google.com) → **New project**.
 2. Delete the placeholder code, paste in the contents of
    `drive-bridge.gs` from this folder.
@@ -135,9 +142,11 @@ expiry.
    - Deploy, authorize it when Google prompts (it's your own script asking
      for permission to use your own Drive — normal, one-time).
    - Copy the Web app URL (ends in `/exec`).
-5. Back in Cloudflare, add two **secrets** to the Worker (Settings →
-   Variables and Secrets, or `npx wrangler secret put NAME` from this
-   folder if you're using the CLI alongside Git deploys):
+5. Back in Cloudflare, add two secrets via **Secrets Store** (Workers &
+   Pages → Secrets Store → Create secret), then bind both to this Worker
+   (Bindings tab → Add binding → Secrets Store) — or just add matching
+   entries to `wrangler.toml`'s `[[secrets_store_secrets]]` block, same as
+   the other secrets, so they survive every future deploy automatically:
    - `APPS_SCRIPT_URL` — the `/exec` URL from step 4.
    - `APPS_SCRIPT_TOKEN` — the same random string you put in `SHARED_SECRET`.
 6. That's it — no folder ID to configure. The script creates a
@@ -148,6 +157,16 @@ expiry.
 If you skip this section, the app still works fine — transcripts just stay
 on-screen (copy/download still work) and the auto-save silently reports
 Drive isn't connected instead of failing anything else.
+
+### Updating the script later
+
+Unlike `worker.js`, this script isn't deployed from GitHub — editing
+`drive-bridge.gs` in this repo doesn't do anything on its own. To push a
+code change live: open the project at script.google.com, paste in the
+updated code, then **Deploy → Manage deployments → (pencil/edit icon on
+the existing deployment) → Version: New version → Deploy**. The `/exec`
+URL stays the same across versions, so no secrets need updating for a
+plain code change.
 
 ## Using it from your phone
 
