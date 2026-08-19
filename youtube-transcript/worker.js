@@ -814,24 +814,20 @@ const PAGE_HTML = `<!doctype html>
       if (!config.configured) {
         throw new Error("Google Drive isn't connected yet - set the APPS_SCRIPT_URL and APPS_SCRIPT_TOKEN Worker secrets (see README's Drive section).");
       }
-      const res = await fetch(config.url, {
+      // no-cors: Apps Script's ContentService has no way to set the
+      // Access-Control-Allow-Origin header a browser needs in order to
+      // read a normal cross-origin response (confirmed - no such method
+      // exists on it at all), so this is a fire-and-forget request
+      // instead. The script still runs and creates the file same as
+      // always; we just can't read back success/failure or the file link
+      // from here, unlike a same-origin call.
+      await fetch(config.url, {
         method: 'POST',
-        // text/plain avoids a CORS preflight (Apps Script Web Apps don't
-        // handle OPTIONS requests) - Apps Script reads the raw body
-        // regardless of the declared content type, so JSON.parse on its
-        // side still works fine.
+        mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ token: config.token, filename: safeTitle, text: out.value })
       });
-      const bodyText = await res.text();
-      let data;
-      try {
-        data = JSON.parse(bodyText);
-      } catch {
-        throw new Error('Apps Script returned a non-JSON response (HTTP ' + res.status + ')');
-      }
-      if (data.error) throw new Error(data.error);
-      driveStatus.innerHTML = 'Saved to Drive as a .txt file — <a href="' + data.link + '" target="_blank" rel="noopener">open file</a>';
+      driveStatus.textContent = 'Sent to Drive — check your "Transcripts" folder to confirm (this app is unable to read back confirmation, see README).';
     } catch (err) {
       driveStatus.textContent = 'Drive save failed: ' + err.message;
     } finally {
