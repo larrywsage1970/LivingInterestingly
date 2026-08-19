@@ -20,12 +20,15 @@
  *
  * Called directly from the browser (not from the Worker) - Google's
  * front-door for script.google.com/exec rejects Worker-originated requests
- * as automated traffic, but real browser traffic goes through fine. That
- * means the response needs an Access-Control-Allow-Origin header for the
- * browser to be allowed to read it (see jsonResponse below) - without it,
- * the request still runs (the file still gets created), but the browser
- * blocks the page's JS from reading the result and reports a generic
- * "Failed to fetch" with no further detail.
+ * as automated traffic, but real browser traffic goes through fine.
+ * ContentService.TextOutput has no way to set custom response headers
+ * (confirmed: no setHeaders method exists on it at all, despite what a lot
+ * of blog posts claim), so there's no way to add the Access-Control-Allow-
+ * Origin header a browser would need to actually read this response. The
+ * browser side works around that with a "fire and forget" no-cors request
+ * instead - the request (and this script) still runs normally either way,
+ * the browser just can't read the result back, which is why this script
+ * has no other CORS-related code to worry about.
  */
 
 const SHARED_SECRET = 'REPLACE_WITH_A_LONG_RANDOM_STRING';
@@ -58,7 +61,7 @@ function getOrCreateFolder(name) {
 }
 
 function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({ 'Access-Control-Allow-Origin': '*' });
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(
+    ContentService.MimeType.JSON
+  );
 }
