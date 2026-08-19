@@ -17,6 +17,15 @@
  * this URL - set it below, and set the matching value as the Worker's
  * APPS_SCRIPT_TOKEN secret. Treat both the deployment URL and this secret
  * like credentials - don't post them publicly.
+ *
+ * Called directly from the browser (not from the Worker) - Google's
+ * front-door for script.google.com/exec rejects Worker-originated requests
+ * as automated traffic, but real browser traffic goes through fine. That
+ * means the response needs an Access-Control-Allow-Origin header for the
+ * browser to be allowed to read it (see jsonResponse below) - without it,
+ * the request still runs (the file still gets created), but the browser
+ * blocks the page's JS from reading the result and reports a generic
+ * "Failed to fetch" with no further detail.
  */
 
 const SHARED_SECRET = 'REPLACE_WITH_A_LONG_RANDOM_STRING';
@@ -49,7 +58,7 @@ function getOrCreateFolder(name) {
 }
 
 function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(
-    ContentService.MimeType.JSON
-  );
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({ 'Access-Control-Allow-Origin': '*' });
 }
