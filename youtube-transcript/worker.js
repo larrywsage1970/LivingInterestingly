@@ -573,8 +573,25 @@ const PAGE_HTML = `<!doctype html>
     padding: 16px;
   }
   .wrap { max-width: 720px; margin: 0 auto; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   h1 { font-size: 1.3rem; margin: 0 0 4px; }
   p.sub { color: var(--muted); margin: 0 0 20px; font-size: 0.9rem; }
+  .refresh-btn {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .refresh-btn:active { transform: rotate(90deg); transition: transform 0.2s; }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -643,8 +660,13 @@ const PAGE_HTML = `<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <h1>Transcript Extractor</h1>
-  <p class="sub">Paste a YouTube link or an Apple Podcasts episode link, get the transcript, copy it into your podcast/blog notes.</p>
+  <div class="header-row">
+    <div>
+      <h1>Transcript Extractor</h1>
+      <p class="sub">Paste a YouTube link or an Apple Podcasts episode link, get the transcript, copy it into your podcast/blog notes.</p>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" title="Reload the app" aria-label="Reload the app">⟳</button>
+  </div>
 
   <div class="card">
     <input type="text" id="urlInput" placeholder="YouTube or Apple Podcasts episode link..." inputmode="url" autocapitalize="off" autocorrect="off">
@@ -667,6 +689,9 @@ const PAGE_HTML = `<!doctype html>
 </div>
 
 <script>
+  const refreshBtn = document.getElementById('refreshBtn');
+  refreshBtn.addEventListener('click', () => location.reload());
+
   const urlInput = document.getElementById('urlInput');
   const fetchBtn = document.getElementById('fetchBtn');
   const statusEl = document.getElementById('status');
