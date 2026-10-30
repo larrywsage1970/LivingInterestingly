@@ -31,7 +31,7 @@ const VERSES = [
   [0,   8,   'Son of man, can these bones live?', 'Ezekiel 37:3'],
   [8,   19,  'O ye dry bones, hear the word of the LORD.', 'Ezekiel 37:4'],
   [19,  30,  'There was a noise, and behold a shaking, and the bones came together, bone to his bone.', 'Ezekiel 37:7'],
-  [30,  40,  'The breath came into them, and they lived, and stood up upon their feet, an exceeding great army.', 'Ezekiel 37:10'],
+  [30,  40,  'Behold, I will cause breath to enter into you, and ye shall live.', 'Ezekiel 37:5'],
   [40,  52,  'And shall put my spirit in you, and ye shall live.', 'Ezekiel 37:14'],
   [52,  64,  'When the man was let down, and touched the bones of Elisha, he revived, and stood up on his feet.', '2 Kings 13:21'],
   [64,  76,  'Thy dead men shall live\u2026 Awake and sing, ye that dwell in dust.', 'Isaiah 26:19'],
@@ -42,7 +42,7 @@ const VERSES = [
   [124, 136, 'Even when we were dead in sins, hath quickened us together with Christ.', 'Ephesians 2:5'],
   [136, 148, 'Thou hast turned for me my mourning into dancing.', 'Psalm 30:11'],
   [148, 160, 'Let them praise his name in the dance.', 'Psalm 149:3'],
-  [160, 172, 'Whom God hath raised up, having loosed the pains of death: because it was not possible that he should be holden of it.', 'Acts 2:24'],
+  [160, 172, 'The breath came into them, and they lived, and stood up upon their feet, an exceeding great army.', 'Ezekiel 37:10'],
   [172, 186, 'And David danced before the LORD with all his might.', '2 Samuel 6:14'],
   [186, 198, 'The trumpet shall sound, and the dead shall be raised incorruptible.', '1 Corinthians 15:52'],
   [198, 210, 'I am he that liveth, and was dead; and, behold, I am alive for evermore.', 'Revelation 1:18'],
@@ -54,7 +54,7 @@ const VERSES = [
 ];
 
 // Phase timings (seconds)
-const T_RATTLE0 = 8, T_ASM0 = 19, T_ASM1 = 29, T_STAND0 = 30, T_STAND1 = 35, T_DANCE0 = 35;
+const T_DANCE0 = 35; // first skeleton starts dancing; also the dance beat's zero point
 const T_FALL0 = 262, T_FALL1 = 267;
 // Wild section: builds from 2:45, full intensity at 3:00, eases off before the collapse
 const T_WILD0 = 165, T_WILD1 = 180, T_WILD2 = 248, T_WILD3 = 257;
@@ -84,11 +84,21 @@ SKELETONS.forEach((s, i) => {
   s.phase = (i * 0.37) % 1;
   s.lieDir = -1;
   s.listener = i === 3 || i === 5; // these two just bob their heads to the music
+  s.alive = { tR: 0, tA: 0, tS0: 0, tS1: 0, tD: 0, spread: 3 };
 });
 
 const PIECES = ['spine', 'ribs', 'pelvis', 'skull',
   'humL', 'radL', 'handL', 'humR', 'radR', 'handR',
   'femL', 'tibL', 'footL', 'femR', 'tibR', 'footR'];
+
+// Wake-up order: one skeleton first, then one more joins every 17 s; all nine dancing before 3:00.
+// Each: rattle (tR) → bones fly together (tA) → lie assembled → stand up (tS0..tS1) → dance (tD).
+const WAKE_ORDER = [6, 5, 7, 2, 1, 4, 8, 3, 0];
+WAKE_ORDER.forEach((i, n) => {
+  const a = SKELETONS[i].alive;
+  if (n === 0) Object.assign(a, { tR: 8, tA: 19, tS0: 30, tS1: 35, tD: 35, spread: 5.5 });
+  else { const tD = 35 + n * 17; Object.assign(a, { tR: tD - 17, tA: tD - 13, tS0: tD - 5, tS1: tD, tD, spread: 3 }); }
+});
 
 // Scattered resting spots for every bone (on the ground, random rotations)
 SKELETONS.forEach(s => {
@@ -363,48 +373,54 @@ function render(t) {
   const c = sctx;
   c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
 
-  const rattleAmp = smooth(T_RATTLE0, T_ASM0, t) * (1 - smooth(T_ASM0 + 2, T_ASM0 + 6, t));
-  const life = smooth(T_STAND0, T_STAND1, t) * (1 - smooth(T_FALL0, T_FALL0 + 1.5, t));
-  const danceIn = smooth(T_DANCE0, T_DANCE0 + 2.5, t) * (1 - smooth(T_FALL0 - 1.5, T_FALL0, t));
   const w = wildness(t);
+  const fallOut = 1 - smooth(T_FALL0, T_FALL0 + 1.5, t);
+  const first = SKELETONS[WAKE_ORDER[0]].alive;
+  const firstLife = smooth(first.tS0, first.tS1, t) * fallOut;
 
   // ground dust
   for (const d of DUST) {
     const x = (d.x + Math.sin(t * 0.2 * d.sp + d.ph) * 40) % W, y = d.y + Math.sin(t * d.sp + d.ph) * 6;
-    c.fillStyle = `rgba(200,210,230,${0.10 + rattleAmp * 0.25})`; c.beginPath(); c.arc(x, y, d.s, 0, 7); c.fill();
-  }
-  // breath wind: particles spiral inward while life enters
-  const bw = smooth(T_STAND0 - 2, T_STAND0, t) * (1 - smooth(T_STAND1, T_STAND1 + 2, t));
-  if (bw > 0) for (const p of BREATH) {
-    const k = ((t * p.sp * 0.25 + p.ph) % 1), r = p.r * (1 - k), a = p.a + k * 4;
-    c.fillStyle = `rgba(170,210,255,${bw * (1 - k) * 0.8})`; c.beginPath(); c.arc(W / 2 + Math.cos(a) * r * 1.2, 650 + Math.sin(a) * r * 0.45, p.s, 0, 7); c.fill();
+    c.fillStyle = 'rgba(200,210,230,0.12)'; c.beginPath(); c.arc(x, y, d.s, 0, 7); c.fill();
   }
 
   for (const sk of SKELETONS) {
-    const u = sk.h / 8;
-    const P = mixPose(REST, dancePose(sk, Math.max(t, T_DANCE0)), danceIn);
+    const u = sk.h / 8, A = sk.alive;
+    const rattleAmp = smooth(A.tR, A.tA, t) * (1 - smooth(A.tA + 2, A.tA + 6, t));
+    const life = smooth(A.tS0, A.tS1, t) * fallOut;
+    const danceIn = smooth(A.tD, A.tD + 2.5, t) * (1 - smooth(T_FALL0 - 1.5, T_FALL0, t));
+    // breath wind: particles spiral in around this skeleton as it stands
+    const bw = smooth(A.tS0 - 2, A.tS0, t) * (1 - smooth(A.tS1, A.tS1 + 2, t));
+    if (bw > 0) {
+      const spread = A === first ? 1 : 0.35 * sk.h / 390, cy = A === first ? 650 : sk.ground - sk.h * 0.5;
+      for (const p of BREATH) {
+        const k = ((t * p.sp * 0.25 + p.ph) % 1), r = p.r * (1 - k) * spread, a = p.a + k * 4;
+        c.fillStyle = `rgba(170,210,255,${bw * (1 - k) * 0.8})`; c.beginPath(); c.arc((A === first ? W / 2 : sk.x) + Math.cos(a) * r * 1.2, cy + Math.sin(a) * r * 0.45, p.s, 0, 7); c.fill();
+      }
+    }
+    const P = mixPose(REST, dancePose(sk, Math.max(t, A.tD)), danceIn);
     let pose = solve(sk, P);
-    // lying → standing (pivot at feet)
-    const stand = smooth(T_STAND0, T_STAND1, t);
+    // lying → standing
+    const stand = smooth(A.tS0, A.tS1, t);
     const lieAng = sk.lieDir * Math.PI / 2 * (1 - stand);
-    if (t < T_STAND1) {
+    if (t < A.tS1) {
       // lie centered on sk.x, then rise up (rotate about body middle, drop to the ground while lying)
       pose = rotateAll(pose, sk.x, sk.ground - sk.h * 0.48, lieAng);
       const drop = (sk.h * 0.48 - u * 0.55) * Math.abs(Math.sin(lieAng));
       for (const k in pose) pose[k].y += drop;
+      for (const k in pose) pose[k].y = Math.min(pose[k].y, sk.ground - 6);
     }
-    if (t < T_STAND1) for (const k in pose) pose[k].y = Math.min(pose[k].y, sk.ground - 6);
 
     c.globalAlpha = sk.alpha;
     for (const name of PIECES) {
       const sc = sk.scatter[name], tp = pose[name];
       let x, y, rot;
-      if (t < T_ASM0 || t >= T_FALL1 + sc.fallDelay) {
+      if (t < A.tA || t >= T_FALL1 + sc.fallDelay) {
         x = sc.x; y = sc.y; rot = sc.rot;
         const j = rattleAmp * (0.5 + 0.5 * Math.sin(t * 3 + sc.jit));
         x += Math.sin(t * 47 + sc.jit) * 4 * j; y -= Math.abs(Math.sin(t * 31 + sc.jit)) * 14 * j; rot += Math.sin(t * 39 + sc.jit) * 0.15 * j;
       } else if (t < T_FALL0) {
-        const k = ease(clamp((t - T_ASM0 - sc.delay) / 2.2, 0, 1));
+        const k = ease(clamp((t - A.tA - sc.delay * A.spread / 5.5) / 2.2, 0, 1));
         x = lerp(sc.x, tp.x, k); y = lerp(sc.y, tp.y, k) - Math.sin(k * Math.PI) * sc.arc; rot = lerpAng(sc.rot, tp.rot, k);
         if (k < 1 && k > 0) rot += Math.sin(k * Math.PI) * 2 * (sc.jit % 2 > 1 ? 1 : -1);
         if (w > 0) { x += Math.sin(t * 43 + sc.jit) * 3 * w; y += Math.sin(t * 37 + sc.jit * 2) * 3 * w; rot += Math.sin(t * 29 + sc.jit) * 0.08 * w; }
@@ -427,7 +443,7 @@ function render(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(scene, 0, 0);
   gctx.clearRect(0, 0, glow.width, glow.height); gctx.filter = 'blur(6px)'; gctx.drawImage(scene, 0, 0, glow.width, glow.height); gctx.filter = 'none';
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.55 + 0.35 * life + 0.35 * w * Math.pow(Math.abs(Math.cos(t * Math.PI * SONG_BPM / 60)), 4)); ctx.drawImage(glow, 0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.55 + 0.35 * firstLife + 0.35 * w * Math.pow(Math.abs(Math.cos(t * Math.PI * SONG_BPM / 60)), 4)); ctx.drawImage(glow, 0, 0, W, H);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 
