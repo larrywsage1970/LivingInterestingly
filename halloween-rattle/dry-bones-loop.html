@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dry Bones Live</title>
+<style>
+  :root { --bg: #000; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; cursor: none; }
+  canvas { width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; background: #000; }
+  #hint { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; color: #555;
+          font: 14px sans-serif; transition: opacity 1s; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="hint">Click to go fullscreen</div>
+<script>
+// ---------- Config ----------
+const W = 1920, H = 1080;
+const LOOP = 120;            // seconds; animation repeats seamlessly
+const BPM = 120;             // dance tempo
+const BONE = '#f3eedf';
+const GLOW = 'rgba(150,200,255,0.55)';
+const GOLD = '#e8b84a';
+
+// KJV (public domain). [start, end, text, reference]
+const VERSES = [
+  [0,   8,   'Son of man, can these bones live?', 'Ezekiel 37:3'],
+  [8,   19,  'O ye dry bones, hear the word of the LORD.', 'Ezekiel 37:4'],
+  [19,  30,  'There was a noise, and behold a shaking, and the bones came together, bone to his bone.', 'Ezekiel 37:7'],
+  [30,  40,  'The breath came into them, and they lived, and stood up upon their feet, an exceeding great army.', 'Ezekiel 37:10'],
+  [40,  49,  'When the man was let down, and touched the bones of Elisha, he revived, and stood up on his feet.', '2 Kings 13:21'],
+  [49,  58,  'Thy dead men shall live… Awake and sing, ye that dwell in dust.', 'Isaiah 26:19'],
+  [58,  67,  'I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live.', 'John 11:25'],
+  [67,  76,  'The dead shall hear the voice of the Son of God: and they that hear shall live.', 'John 5:25'],
+  [76,  85,  'He that raised up Christ from the dead shall also quicken your mortal bodies by his Spirit that dwelleth in you.', 'Romans 8:11'],
+  [85,  94,  'Even when we were dead in sins, hath quickened us together with Christ.', 'Ephesians 2:5'],
+  [94,  103, 'The trumpet shall sound, and the dead shall be raised incorruptible.', '1 Corinthians 15:52'],
+  [103, 112, 'He is not here: for he is risen, as he said.', 'Matthew 28:6'],
+  [112, 120, 'O death, where is thy sting? O grave, where is thy victory?', '1 Corinthians 15:55'],
+];
+
+// Phase timings (seconds)
+const T_RATTLE0 = 8, T_ASM0 = 19, T_ASM1 = 29, T_STAND0 = 30, T_STAND1 = 35, T_DANCE0 = 35;
+const T_FALL0 = 112, T_FALL1 = 117;
+
+// ---------- Deterministic random ----------
+function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
+const R = rng(1031);
+
+// ---------- Math helpers ----------
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const ease = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const easeIn = k => k * k * k;
+const smooth = (a, b, t) => ease(clamp((t - a) / (b - a), 0, 1));
+function lerpAng(a, b, k) { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * k; }
+
+// ---------- Skeleton definitions ----------
+// Row of skeletons: back row smaller/dimmer ("an exceeding great army")
+const SKELETONS = [];
+[[400, 870, 250, 0.55], [770, 870, 250, 0.55], [1150, 870, 250, 0.55], [1520, 870, 250, 0.55]]
+  .forEach(([x, g, h, a]) => SKELETONS.push({ x, ground: g, h, alpha: a }));
+[[220, 1030, 390, 1], [580, 1030, 390, 1], [960, 1030, 390, 1], [1340, 1030, 390, 1], [1700, 1030, 390, 1]]
+  .forEach(([x, g, h, a]) => SKELETONS.push({ x, ground: g, h, alpha: a }));
+SKELETONS.forEach((s, i) => {
+  s.moveOffset = i % 5;
+  s.phase = (i * 0.37) % 1;
+  s.lieDir = -1;
+});
+
+const PIECES = ['spine', 'ribs', 'pelvis', 'skull',
+  'humL', 'radL', 'handL', 'humR', 'radR', 'handR',
+  'femL', 'tibL', 'footL', 'femR', 'tibR', 'footR'];
+
+// Scattered resting spots for every bone (on the ground, random rotations)
+SKELETONS.forEach(s => {
+  s.scatter = {};
+  PIECES.forEach(p => {
+    s.scatter[p] = {
+      x: s.x + (R() - 0.5) * s.h * 1.1,
+      y: s.ground - 4 - R() * s.h * 0.06,
+      rot: R() * Math.PI * 2,
+      delay: R() * 5.5,
+      arc: 80 + R() * 160,
+      fallDelay: R() * 1.8,
+      jit: R() * 100,
+    };
+  });
+});
+
+// ---------- Dance moves: joint angles (radians, 0 = pointing straight down) ----------
+function move(id, b) {
+  // b = beat position (continuous); s = sin on beat
+  const s = Math.sin(b * Math.PI), c = Math.cos(b * Math.PI), s2 = Math.sin(b * Math.PI * 2);
+  const P = { lean: 0, bob: 0, sx: 0, shL: 0.25, elL: 0.2, shR: -0.25, elR: -0.2, hipL: 0.08, knL: 0, hipR: -0.08, knR: 0, head: 0, jaw: 0 };
+  switch (id) {
+    case 0: // praise: both arms high, waving
+      P.shL = 2.75 + 0.25 * s; P.elL = 0.3 * s; P.shR = -2.75 + 0.25 * s; P.elR = 0.3 * s;
+      P.bob = Math.abs(s2) * 0.06; P.knL = -0.25 * Math.abs(s2); P.knR = -0.25 * Math.abs(s2);
+      P.hipL = 0.12 * Math.abs(s2); P.hipR = -0.12 * Math.abs(s2) + 0.04; P.lean = 0.08 * s; P.head = 0.15 * s; P.jaw = Math.abs(s2);
+      break;
+    case 1: // sway: arms swing side to side, hips move
+      P.lean = 0.14 * s; P.sx = 0.12 * s;
+      P.shL = 1.2 + 0.9 * s; P.elL = 0.9; P.shR = -1.2 + 0.9 * s; P.elR = -0.9;
+      P.hipL = 0.15 + 0.1 * s; P.hipR = -0.15 + 0.1 * s; P.knL = -0.2 * Math.max(0, -s); P.knR = 0.2 * Math.max(0, s);
+      P.head = -0.2 * s; P.jaw = Math.abs(s);
+      break;
+    case 2: // kicks: alternate legs, hands on hips
+      { const k = Math.max(0, s), j = Math.max(0, -s);
+        P.hipL = 0.1 + 1.3 * k; P.knL = -0.4 * k; P.hipR = -0.1 - 1.3 * j; P.knR = 0.4 * j;
+        P.shL = 0.7; P.elL = -1.6; P.shR = -0.7; P.elR = 1.6; P.lean = 0.12 * (j - k); P.bob = 0.04 * Math.abs(s2); P.jaw = Math.abs(s2); }
+      break;
+    case 3: // jumping jacks
+      { const o = (1 - c) / 2;
+        P.shL = 0.25 + 2.6 * o; P.elL = 0.2; P.shR = -0.25 - 2.6 * o; P.elR = -0.2;
+        P.hipL = 0.06 + 0.45 * o; P.hipR = -0.06 - 0.45 * o; P.bob = 0.05 * Math.abs(s); P.jaw = o; }
+      break;
+    case 4: // raise-the-roof bounce
+      { const u = Math.abs(s2);
+        P.shL = 1.5 + 0.4 * u; P.elL = 1.3 - 0.5 * u; P.shR = -1.5 - 0.4 * u; P.elR = -1.3 + 0.5 * u;
+        P.knL = -0.7 * (1 - u); P.knR = 0.7 * (1 - u); P.hipL = 0.35 * (1 - u); P.hipR = -0.35 * (1 - u); P.head = 0.25 * Math.sin(b * Math.PI / 2); P.jaw = u; }
+      break;
+  }
+  return P;
+}
+const REST = { lean: 0, bob: 0, sx: 0, shL: 0.12, elL: 0.05, shR: -0.12, elR: -0.05, hipL: 0.05, knL: 0, hipR: -0.05, knR: 0, head: 0, jaw: 0 };
+function mixPose(a, b, k) { const o = {}; for (const key in a) o[key] = lerp(a[key], b[key], k); return o; }
+
+function dancePose(sk, t) {
+  const beat = (t - T_DANCE0) * BPM / 60 + sk.phase;
+  const seg = 8; // seconds per move
+  const idx = Math.floor((t - T_DANCE0) / seg);
+  const f = ((t - T_DANCE0) / seg) - idx;
+  const m0 = (idx + sk.moveOffset) % 5, m1 = (idx + 1 + sk.moveOffset) % 5;
+  const blend = smooth(0.85, 1, f);
+  return mixPose(move(m0, beat), move(m1, beat), blend);
+}
+
+// Forward kinematics → piece transforms {x, y, rot, jaw}
+function solve(sk, P) {
+  const u = sk.h / 8, out = {};
+  const seg = (name, x0, y0, a, len) => {
+    const dx = Math.sin(a), dy = Math.cos(a), x1 = x0 + dx * len, y1 = y0 + dy * len;
+    out[name] = { x: (x0 + x1) / 2, y: (y0 + y1) / 2, rot: Math.atan2(dy, dx) - Math.PI / 2 };
+    return [x1, y1];
+  };
+  const thigh = 1.9 * u, shin = 1.8 * u;
+  // pelvis height = the longer leg's vertical reach (so bent knees crouch), plus any jump
+  const reach = (h, k) => thigh * Math.cos(h) + shin * Math.cos(h + k);
+  const px = sk.x + P.sx * u * 3;
+  const pelY = sk.ground - 0.15 * u - Math.max(reach(P.hipL, P.knL), reach(P.hipR, P.knR)) - P.bob * sk.h;
+  out.pelvis = { x: px, y: pelY, rot: -P.lean };
+  // spine goes up
+  const [nx, ny] = seg('spine', px, pelY - 0.2 * u, P.lean + Math.PI, 3.1 * u);
+  out.ribs = { x: lerp(px, nx, 0.62), y: lerp(pelY - 0.2 * u, ny, 0.62), rot: -P.lean };
+  const ha = P.lean + P.head;
+  out.skull = { x: nx - Math.sin(ha) * 0.8 * u, y: ny - Math.cos(ha) * 0.8 * u, rot: -ha, jaw: P.jaw };
+  // shoulders (perpendicular to spine)
+  const shW = 0.95 * u, cl = Math.cos(P.lean), sl = Math.sin(P.lean);
+  const shX = lerp(px, nx, 0.88), shY = lerp(pelY, ny, 0.88);
+  let e = seg('humL', shX - cl * shW, shY + sl * shW, -P.shL, 1.45 * u);
+  e = seg('radL', e[0], e[1], -P.shL - P.elL, 1.3 * u);
+  seg('handL', e[0], e[1], -P.shL - P.elL, 0.5 * u);
+  e = seg('humR', shX + cl * shW, shY - sl * shW, -P.shR, 1.45 * u);
+  e = seg('radR', e[0], e[1], -P.shR - P.elR, 1.3 * u);
+  seg('handR', e[0], e[1], -P.shR - P.elR, 0.5 * u);
+  // legs
+  const hW = 0.45 * u;
+  let k = seg('femL', px - cl * hW, pelY + 0.1 * u, -P.hipL, thigh);
+  k = seg('tibL', k[0], k[1], -P.hipL - P.knL, shin);
+  out.footL = { x: k[0] - 0.25 * u, y: k[1] + 0.08 * u, rot: Math.PI / 2 };
+  k = seg('femR', px + cl * hW, pelY + 0.1 * u, -P.hipR, thigh);
+  k = seg('tibR', k[0], k[1], -P.hipR - P.knR, shin);
+  out.footR = { x: k[0] + 0.25 * u, y: k[1] + 0.08 * u, rot: -Math.PI / 2 };
+  return out;
+}
+
+// Rotate a whole posed skeleton about a pivot (used for lying down → standing up)
+function rotateAll(pose, cx, cy, a) {
+  const c = Math.cos(a), s = Math.sin(a), o = {};
+  for (const k in pose) {
+    const p = pose[k], dx = p.x - cx, dy = p.y - cy;
+    o[k] = { ...p, x: cx + dx * c - dy * s, y: cy + dx * s + dy * c, rot: p.rot + a };
+  }
+  return o;
+}
+
+// ---------- Bone drawing ----------
+function longBone(ctx, len, w) {
+  const r = w * 0.85;
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.35, -len / 2 + r * 0.6); ctx.lineTo(-w * 0.3, len / 2 - r * 0.6);
+  ctx.lineTo(w * 0.3, len / 2 - r * 0.6); ctx.lineTo(w * 0.35, -len / 2 + r * 0.6); ctx.closePath(); ctx.fill();
+  for (const y of [-len / 2, len / 2]) {
+    ctx.beginPath(); ctx.arc(-r * 0.45, y, r * 0.55, 0, 7); ctx.arc(r * 0.45, y, r * 0.55, 0, 7); ctx.fill();
+  }
+}
+function drawPiece(ctx, name, sk, u, eyeGlow, jaw) {
+  ctx.fillStyle = BONE; ctx.strokeStyle = BONE; ctx.lineCap = 'round';
+  switch (name) {
+    case 'skull': {
+      const r = 0.62 * u;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.15, r * 0.9, r, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(-r * 0.55, r * 0.45, r * 1.1, r * 0.45, r * 0.15); ctx.fill();
+      // jaw (chatters to the beat)
+      const jo = jaw * r * 0.35;
+      ctx.beginPath(); ctx.roundRect(-r * 0.5, r * 0.85 + jo, r, r * 0.38, r * 0.18); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(-r * 0.36, -r * 0.05, r * 0.24, r * 0.29, 0.2, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.36, -r * 0.05, r * 0.24, r * 0.29, -0.2, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, r * 0.22); ctx.lineTo(-r * 0.1, r * 0.44); ctx.lineTo(r * 0.1, r * 0.44); ctx.fill();
+      ctx.lineWidth = r * 0.06; ctx.strokeStyle = '#000';
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.18, r * 0.62); ctx.lineTo(i * r * 0.18, r * 0.9); ctx.stroke(); }
+      if (eyeGlow > 0) {
+        ctx.fillStyle = `rgba(255,200,90,${eyeGlow})`;
+        ctx.beginPath(); ctx.arc(-r * 0.36, -r * 0.03, r * 0.11, 0, 7); ctx.arc(r * 0.36, -r * 0.03, r * 0.11, 0, 7); ctx.fill();
+      }
+      break;
+    }
+    case 'spine': {
+      const len = 3.1 * u;
+      for (let i = 0; i < 11; i++) {
+        const y = -len / 2 + (i + 0.5) * len / 11, w = u * (0.26 - i * 0.008);
+        ctx.beginPath(); ctx.roundRect(-w / 2, y - u * 0.1, w, u * 0.2, u * 0.06); ctx.fill();
+      }
+      break;
+    }
+    case 'ribs': {
+      ctx.lineWidth = u * 0.1;
+      for (let i = 0; i < 6; i++) {
+        const y = -u * 0.8 + i * u * 0.27, rw = u * (0.6 + Math.sin((i + 1.5) / 7 * Math.PI) * 0.4);
+        for (const m of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(0, y);
+          ctx.bezierCurveTo(m * rw * 1.1, y - u * 0.12, m * rw * 1.15, y + u * 0.3, m * rw * 0.55, y + u * 0.42); ctx.stroke();
+        }
+      }
+      ctx.beginPath(); ctx.roundRect(-u * 0.08, -u * 0.85, u * 0.16, u * 1.35, u * 0.08); ctx.fill(); // sternum
+      break;
+    }
+    case 'pelvis': {
+      ctx.beginPath();
+      ctx.moveTo(-u * 0.85, -u * 0.35);
+      ctx.quadraticCurveTo(-u * 0.95, u * 0.25, -u * 0.25, u * 0.45);
+      ctx.lineTo(u * 0.25, u * 0.45);
+      ctx.quadraticCurveTo(u * 0.95, u * 0.25, u * 0.85, -u * 0.35);
+      ctx.quadraticCurveTo(0, -u * 0.05, -u * 0.85, -u * 0.35); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(-u * 0.38, u * 0.12, u * 0.17, u * 0.13, 0, 0, 7); ctx.ellipse(u * 0.38, u * 0.12, u * 0.17, u * 0.13, 0, 0, 7); ctx.fill();
+      break;
+    }
+    case 'humL': case 'humR': longBone(ctx, 1.45 * u, u * 0.2); break;
+    case 'radL': case 'radR': longBone(ctx, 1.3 * u, u * 0.17); break;
+    case 'femL': case 'femR': longBone(ctx, 1.9 * u, u * 0.24); break;
+    case 'tibL': case 'tibR': longBone(ctx, 1.8 * u, u * 0.21); break;
+    case 'handL': case 'handR': {
+      ctx.beginPath(); ctx.ellipse(0, -u * 0.08, u * 0.13, u * 0.12, 0, 0, 7); ctx.fill();
+      ctx.lineWidth = u * 0.055;
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * u * 0.05, 0); ctx.lineTo(i * u * 0.08, u * 0.3); ctx.stroke(); }
+      break;
+    }
+    case 'footL': case 'footR': {
+      ctx.beginPath(); ctx.ellipse(0, 0, u * 0.14, u * 0.34, 0, 0, 7); ctx.fill();
+      ctx.lineWidth = u * 0.06;
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * u * 0.05, u * 0.2); ctx.lineTo(i * u * 0.06, u * 0.45); ctx.stroke(); }
+      break;
+    }
+  }
+}
+
+// ---------- Particles (dust, breath) ----------
+const DUST = Array.from({ length: 140 }, () => ({ x: R() * W, y: 700 + R() * 380, s: 1 + R() * 2.5, sp: 0.3 + R(), ph: R() * 100 }));
+const BREATH = Array.from({ length: 220 }, () => ({ a: R() * Math.PI * 2, r: 200 + R() * 900, sp: 0.4 + R() * 0.9, s: 1 + R() * 2.2, ph: R() }));
+
+// ---------- Scene ----------
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const scene = document.createElement('canvas'); scene.width = W; scene.height = H;
+const sctx = scene.getContext('2d');
+const glow = document.createElement('canvas'); glow.width = W / 4; glow.height = H / 4;
+const gctx = glow.getContext('2d');
+
+function wrap(c, text, maxW) {
+  const words = text.split(' '), lines = []; let line = '';
+  for (const w of words) { const test = line ? line + ' ' + w : w; if (c.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; }
+  if (line) lines.push(line); return lines;
+}
+
+function drawText(c, t) {
+  const v = VERSES.find(v => t >= v[0] && t < v[1]); if (!v) return;
+  const a = Math.min(smooth(v[0], v[0] + 1, t), 1 - smooth(v[1] - 1, v[1], t));
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'top';
+  c.font = 'italic 58px Georgia, Caladea, "Liberation Serif", serif';
+  const lines = wrap(c, '“' + v[2] + '”', 1650);
+  let y = 70;
+  c.shadowColor = 'rgba(160,200,255,0.6)'; c.shadowBlur = 18; c.fillStyle = '#f6f2e6';
+  for (const l of lines) { c.fillText(l, W / 2, y); y += 72; }
+  c.shadowBlur = 0; c.font = '600 40px Georgia, Caladea, "Liberation Serif", serif'; c.fillStyle = GOLD;
+  c.fillText('— ' + v[3] + ' (KJV)', W / 2, y + 14);
+  c.restore();
+}
+
+function render(t) {
+  t = ((t % LOOP) + LOOP) % LOOP;
+  const c = sctx;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+
+  const rattleAmp = smooth(T_RATTLE0, T_ASM0, t) * (1 - smooth(T_ASM0 + 2, T_ASM0 + 6, t));
+  const life = smooth(T_STAND0, T_STAND1, t) * (1 - smooth(T_FALL0, T_FALL0 + 1.5, t));
+  const danceIn = smooth(T_DANCE0, T_DANCE0 + 2.5, t) * (1 - smooth(T_FALL0 - 1.5, T_FALL0, t));
+
+  // ground dust
+  for (const d of DUST) {
+    const x = (d.x + Math.sin(t * 0.2 * d.sp + d.ph) * 40) % W, y = d.y + Math.sin(t * d.sp + d.ph) * 6;
+    c.fillStyle = `rgba(200,210,230,${0.10 + rattleAmp * 0.25})`; c.beginPath(); c.arc(x, y, d.s, 0, 7); c.fill();
+  }
+  // breath wind: particles spiral inward while life enters
+  const bw = smooth(T_STAND0 - 2, T_STAND0, t) * (1 - smooth(T_STAND1, T_STAND1 + 2, t));
+  if (bw > 0) for (const p of BREATH) {
+    const k = ((t * p.sp * 0.25 + p.ph) % 1), r = p.r * (1 - k), a = p.a + k * 4;
+    c.fillStyle = `rgba(170,210,255,${bw * (1 - k) * 0.8})`; c.beginPath(); c.arc(W / 2 + Math.cos(a) * r * 1.2, 650 + Math.sin(a) * r * 0.45, p.s, 0, 7); c.fill();
+  }
+
+  for (const sk of SKELETONS) {
+    const u = sk.h / 8;
+    const P = mixPose(REST, dancePose(sk, Math.max(t, T_DANCE0)), danceIn);
+    let pose = solve(sk, P);
+    // lying → standing (pivot at feet)
+    const stand = smooth(T_STAND0, T_STAND1, t);
+    const lieAng = sk.lieDir * Math.PI / 2 * (1 - stand);
+    if (t < T_STAND1) {
+      // lie centered on sk.x, then rise up (rotate about body middle, drop to the ground while lying)
+      pose = rotateAll(pose, sk.x, sk.ground - sk.h * 0.48, lieAng);
+      const drop = (sk.h * 0.48 - u * 0.55) * Math.abs(Math.sin(lieAng));
+      for (const k in pose) pose[k].y += drop;
+    }
+    if (t < T_STAND1) for (const k in pose) pose[k].y = Math.min(pose[k].y, sk.ground - 6);
+
+    c.globalAlpha = sk.alpha;
+    for (const name of PIECES) {
+      const sc = sk.scatter[name], tp = pose[name];
+      let x, y, rot;
+      if (t < T_ASM0 || t >= T_FALL1 + sc.fallDelay) {
+        x = sc.x; y = sc.y; rot = sc.rot;
+        const j = rattleAmp * (0.5 + 0.5 * Math.sin(t * 3 + sc.jit));
+        x += Math.sin(t * 47 + sc.jit) * 4 * j; y -= Math.abs(Math.sin(t * 31 + sc.jit)) * 14 * j; rot += Math.sin(t * 39 + sc.jit) * 0.15 * j;
+      } else if (t < T_FALL0) {
+        const k = ease(clamp((t - T_ASM0 - sc.delay) / 2.2, 0, 1));
+        x = lerp(sc.x, tp.x, k); y = lerp(sc.y, tp.y, k) - Math.sin(k * Math.PI) * sc.arc; rot = lerpAng(sc.rot, tp.rot, k);
+        if (k < 1 && k > 0) rot += Math.sin(k * Math.PI) * 2 * (sc.jit % 2 > 1 ? 1 : -1);
+      } else {
+        const k = easeIn(clamp((t - T_FALL0 - sc.fallDelay) / (T_FALL1 - T_FALL0), 0, 1));
+        x = lerp(tp.x, sc.x, k); y = lerp(tp.y, sc.y, k) - Math.sin(k * Math.PI) * 40; rot = lerpAng(tp.rot, sc.rot, k);
+      }
+      c.save(); c.translate(x, y); c.rotate(rot);
+      drawPiece(c, name, sk, u, life, name === 'skull' ? (tp.jaw || 0) * danceIn : 0);
+      c.restore();
+    }
+    c.globalAlpha = 1;
+  }
+
+  drawText(c, t);
+
+  // composite with a soft glow
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(scene, 0, 0);
+  gctx.clearRect(0, 0, glow.width, glow.height); gctx.filter = 'blur(6px)'; gctx.drawImage(scene, 0, 0, glow.width, glow.height); gctx.filter = 'none';
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 + 0.35 * life; ctx.drawImage(glow, 0, 0, W, H);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+
+// Exposed for offline video rendering
+window.renderAt = render;
+window.LOOP = LOOP;
+
+if (!new URLSearchParams(location.search).has('render')) {
+  const t0 = performance.now();
+  const tick = now => { render((now - t0) / 1000); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+  document.addEventListener('click', () => { document.documentElement.requestFullscreen?.(); });
+  setTimeout(() => { document.getElementById('hint').style.opacity = 0; }, 4000);
+} else {
+  document.getElementById('hint').remove();
+}
+</script>
+</body>
+</html>
