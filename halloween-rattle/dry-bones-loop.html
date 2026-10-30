@@ -9,18 +9,19 @@
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; cursor: none; }
   canvas { width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; background: #000; }
-  #hint { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; color: #555;
-          font: 14px sans-serif; transition: opacity 1s; }
+  #hint { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; color: #8a8f99;
+          font: 20px sans-serif; transition: opacity 1s; }
 </style>
 </head>
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
-<div id="hint">Click to go fullscreen</div>
+<div id="hint">Start the song, then tap here to start the bones</div>
 <script>
 // ---------- Config ----------
 const W = 1920, H = 1080;
-const LOOP = 120;            // seconds; animation repeats seamlessly
-const BPM = 120;             // dance tempo
+const LOOP = 276;            // seconds (4:36, the length of "Rattle!"); animation repeats seamlessly
+const SONG_BPM = 76;         // "Rattle!" tempo; head nods land on this beat
+const BPM = SONG_BPM * 2;    // dance moves run double time
 const BONE = '#f3eedf';
 const GLOW = 'rgba(150,200,255,0.55)';
 const GOLD = '#e8b84a';
@@ -31,20 +32,33 @@ const VERSES = [
   [8,   19,  'O ye dry bones, hear the word of the LORD.', 'Ezekiel 37:4'],
   [19,  30,  'There was a noise, and behold a shaking, and the bones came together, bone to his bone.', 'Ezekiel 37:7'],
   [30,  40,  'The breath came into them, and they lived, and stood up upon their feet, an exceeding great army.', 'Ezekiel 37:10'],
-  [40,  49,  'When the man was let down, and touched the bones of Elisha, he revived, and stood up on his feet.', '2 Kings 13:21'],
-  [49,  58,  'Thy dead men shall live… Awake and sing, ye that dwell in dust.', 'Isaiah 26:19'],
-  [58,  67,  'I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live.', 'John 11:25'],
-  [67,  76,  'The dead shall hear the voice of the Son of God: and they that hear shall live.', 'John 5:25'],
-  [76,  85,  'He that raised up Christ from the dead shall also quicken your mortal bodies by his Spirit that dwelleth in you.', 'Romans 8:11'],
-  [85,  94,  'Even when we were dead in sins, hath quickened us together with Christ.', 'Ephesians 2:5'],
-  [94,  103, 'The trumpet shall sound, and the dead shall be raised incorruptible.', '1 Corinthians 15:52'],
-  [103, 112, 'He is not here: for he is risen, as he said.', 'Matthew 28:6'],
-  [112, 120, 'O death, where is thy sting? O grave, where is thy victory?', '1 Corinthians 15:55'],
+  [40,  52,  'And shall put my spirit in you, and ye shall live.', 'Ezekiel 37:14'],
+  [52,  64,  'When the man was let down, and touched the bones of Elisha, he revived, and stood up on his feet.', '2 Kings 13:21'],
+  [64,  76,  'Thy dead men shall live\u2026 Awake and sing, ye that dwell in dust.', 'Isaiah 26:19'],
+  [76,  88,  'I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live.', 'John 11:25'],
+  [88,  100, 'The dead shall hear the voice of the Son of God: and they that hear shall live.', 'John 5:25'],
+  [100, 112, 'For this my son was dead, and is alive again; he was lost, and is found.', 'Luke 15:24'],
+  [112, 124, 'He that raised up Christ from the dead shall also quicken your mortal bodies by his Spirit that dwelleth in you.', 'Romans 8:11'],
+  [124, 136, 'Even when we were dead in sins, hath quickened us together with Christ.', 'Ephesians 2:5'],
+  [136, 148, 'Thou hast turned for me my mourning into dancing.', 'Psalm 30:11'],
+  [148, 160, 'Let them praise his name in the dance.', 'Psalm 149:3'],
+  [160, 172, 'Whom God hath raised up, having loosed the pains of death: because it was not possible that he should be holden of it.', 'Acts 2:24'],
+  [172, 186, 'And David danced before the LORD with all his might.', '2 Samuel 6:14'],
+  [186, 198, 'The trumpet shall sound, and the dead shall be raised incorruptible.', '1 Corinthians 15:52'],
+  [198, 210, 'I am he that liveth, and was dead; and, behold, I am alive for evermore.', 'Revelation 1:18'],
+  [210, 222, 'Praise him with the timbrel and dance: praise him with stringed instruments and organs.', 'Psalm 150:4'],
+  [222, 234, 'O death, I will be thy plagues; O grave, I will be thy destruction.', 'Hosea 13:14'],
+  [234, 246, 'He is not here: for he is risen, as he said.', 'Matthew 28:6'],
+  [246, 260, 'But thanks be to God, which giveth us the victory through our Lord Jesus Christ.', '1 Corinthians 15:57'],
+  [260, 276, 'O death, where is thy sting? O grave, where is thy victory?', '1 Corinthians 15:55'],
 ];
 
 // Phase timings (seconds)
 const T_RATTLE0 = 8, T_ASM0 = 19, T_ASM1 = 29, T_STAND0 = 30, T_STAND1 = 35, T_DANCE0 = 35;
-const T_FALL0 = 112, T_FALL1 = 117;
+const T_FALL0 = 262, T_FALL1 = 267;
+// Wild section: builds from 2:45, full intensity at 3:00, eases off before the collapse
+const T_WILD0 = 165, T_WILD1 = 180, T_WILD2 = 248, T_WILD3 = 257;
+const wildness = t => smooth(T_WILD0, T_WILD1, t) * (1 - smooth(T_WILD2, T_WILD3, t));
 
 // ---------- Deterministic random ----------
 function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
@@ -69,6 +83,7 @@ SKELETONS.forEach((s, i) => {
   s.moveOffset = i % 5;
   s.phase = (i * 0.37) % 1;
   s.lieDir = -1;
+  s.listener = i === 3 || i === 5; // these two just bob their heads to the music
 });
 
 const PIECES = ['spine', 'ribs', 'pelvis', 'skull',
@@ -95,7 +110,7 @@ SKELETONS.forEach(s => {
 function move(id, b) {
   // b = beat position (continuous); s = sin on beat
   const s = Math.sin(b * Math.PI), c = Math.cos(b * Math.PI), s2 = Math.sin(b * Math.PI * 2);
-  const P = { lean: 0, bob: 0, sx: 0, shL: 0.25, elL: 0.2, shR: -0.25, elR: -0.2, hipL: 0.08, knL: 0, hipR: -0.08, knR: 0, head: 0, jaw: 0 };
+  const P = { lean: 0, bob: 0, sx: 0, shL: 0.25, elL: 0.2, shR: -0.25, elR: -0.2, hipL: 0.08, knL: 0, hipR: -0.08, knR: 0, head: 0, jaw: 0, nod: 0 };
   switch (id) {
     case 0: // praise: both arms high, waving
       P.shL = 2.75 + 0.25 * s; P.elL = 0.3 * s; P.shR = -2.75 + 0.25 * s; P.elR = 0.3 * s;
@@ -123,20 +138,60 @@ function move(id, b) {
         P.shL = 1.5 + 0.4 * u; P.elL = 1.3 - 0.5 * u; P.shR = -1.5 - 0.4 * u; P.elR = -1.3 + 0.5 * u;
         P.knL = -0.7 * (1 - u); P.knR = 0.7 * (1 - u); P.hipL = 0.35 * (1 - u); P.hipR = -0.35 * (1 - u); P.head = 0.25 * Math.sin(b * Math.PI / 2); P.jaw = u; }
       break;
+    case 5: // listener: hands on hips, head bobbing on the song's beat, foot tapping
+      { const n = Math.pow(Math.abs(Math.sin(b * Math.PI / 2)), 3);
+        P.nod = n; P.head = 0.06 * Math.sin(b * Math.PI / 4); P.lean = 0.04 * Math.sin(b * Math.PI / 4);
+        P.shL = 0.7; P.elL = -1.6; P.shR = -0.7; P.elR = 1.6;
+        P.hipR = -0.12 - 0.12 * n; P.knR = 0.25 * n; P.hipL = 0.1; P.sx = 0.03 * Math.sin(b * Math.PI / 4); }
+      break;
+    // ---- wild moves (blended in by wildness) ----
+    case 6: // windmill flail with big jumps
+      { const j = Math.abs(Math.sin(b * Math.PI));
+        P.shL = 1.6 + 2.6 * Math.sin(b * Math.PI); P.elL = 0.6 * c; P.shR = -1.6 + 2.6 * Math.sin(b * Math.PI + 1.5); P.elR = -0.6 * c;
+        P.hipL = 0.3 + 0.5 * j; P.knL = -0.9 * j; P.hipR = -0.3 - 0.5 * j; P.knR = 0.9 * j;
+        P.bob = 0.16 * j; P.lean = 0.25 * s; P.head = 0.5 * s2; P.jaw = j; P.sx = 0.25 * Math.sin(b * Math.PI / 4); }
+      break;
+    case 7: // headbang with air-guitar arms
+      { const n = Math.abs(Math.sin(b * Math.PI));
+        P.nod = 1.6 * n; P.lean = 0.2 * s2; P.head = 0.35 * s;
+        P.shL = 1.0 + 0.4 * n; P.elL = 1.4; P.shR = -0.9; P.elR = -1.2 - 0.9 * n;
+        P.hipL = 0.35; P.knL = -0.5; P.hipR = -0.35; P.knR = 0.5; P.bob = 0.04 * n; P.jaw = n; }
+      break;
+    case 8: // high-kick frenzy, arms up
+      { const k = Math.max(0, s), q = Math.max(0, -s);
+        P.hipL = 0.1 + 1.9 * k; P.knL = -0.2 * k; P.hipR = -0.1 - 1.9 * q; P.knR = 0.2 * q;
+        P.shL = 2.6 + 0.4 * s2; P.elL = 0.4 * s; P.shR = -2.6 + 0.4 * s2; P.elR = 0.4 * s;
+        P.bob = 0.1 * Math.abs(s2); P.lean = 0.2 * (q - k); P.jaw = Math.abs(s2); P.sx = 0.3 * Math.sin(b * Math.PI / 8); }
+      break;
   }
   return P;
 }
-const REST = { lean: 0, bob: 0, sx: 0, shL: 0.12, elL: 0.05, shR: -0.12, elR: -0.05, hipL: 0.05, knL: 0, hipR: -0.05, knR: 0, head: 0, jaw: 0 };
+const REST = { lean: 0, bob: 0, sx: 0, shL: 0.12, elL: 0.05, shR: -0.12, elR: -0.05, hipL: 0.05, knL: 0, hipR: -0.05, knR: 0, head: 0, jaw: 0, nod: 0 };
 function mixPose(a, b, k) { const o = {}; for (const key in a) o[key] = lerp(a[key], b[key], k); return o; }
 
 function dancePose(sk, t) {
-  const beat = (t - T_DANCE0) * BPM / 60 + sk.phase;
+  const beat = (t - T_DANCE0) * BPM / 60 + (sk.listener ? 0 : sk.phase);
   const seg = 8; // seconds per move
   const idx = Math.floor((t - T_DANCE0) / seg);
   const f = ((t - T_DANCE0) / seg) - idx;
-  const m0 = (idx + sk.moveOffset) % 5, m1 = (idx + 1 + sk.moveOffset) % 5;
   const blend = smooth(0.85, 1, f);
-  return mixPose(move(m0, beat), move(m1, beat), blend);
+  let base;
+  if (sk.listener) base = move(5, beat);
+  else {
+    const m0 = (idx + sk.moveOffset) % 5, m1 = (idx + 1 + sk.moveOffset) % 5;
+    base = mixPose(move(m0, beat), move(m1, beat), blend);
+  }
+  const w = wildness(t);
+  if (w <= 0) return base;
+  // wild: listeners headbang; dancers cycle flail / headbang / high kicks
+  let wild;
+  if (sk.listener) wild = move(7, beat);
+  else {
+    const WILD = [6, 7, 8, 6, 8];
+    const w0 = WILD[(idx + sk.moveOffset) % 5], w1 = WILD[(idx + 1 + sk.moveOffset) % 5];
+    wild = mixPose(move(w0, beat), move(w1, beat), blend);
+  }
+  return mixPose(base, wild, w);
 }
 
 // Forward kinematics → piece transforms {x, y, rot, jaw}
@@ -157,7 +212,7 @@ function solve(sk, P) {
   const [nx, ny] = seg('spine', px, pelY - 0.2 * u, P.lean + Math.PI, 3.1 * u);
   out.ribs = { x: lerp(px, nx, 0.62), y: lerp(pelY - 0.2 * u, ny, 0.62), rot: -P.lean };
   const ha = P.lean + P.head;
-  out.skull = { x: nx - Math.sin(ha) * 0.8 * u, y: ny - Math.cos(ha) * 0.8 * u, rot: -ha, jaw: P.jaw };
+  out.skull = { x: nx - Math.sin(ha) * 0.8 * u, y: ny - Math.cos(ha) * 0.8 * u + P.nod * 0.4 * u, rot: -ha, jaw: P.jaw, nod: P.nod };
   // shoulders (perpendicular to spine)
   const shW = 0.95 * u, cl = Math.cos(P.lean), sl = Math.sin(P.lean);
   const shX = lerp(px, nx, 0.88), shY = lerp(pelY, ny, 0.88);
@@ -198,11 +253,12 @@ function longBone(ctx, len, w) {
     ctx.beginPath(); ctx.arc(-r * 0.45, y, r * 0.55, 0, 7); ctx.arc(r * 0.45, y, r * 0.55, 0, 7); ctx.fill();
   }
 }
-function drawPiece(ctx, name, sk, u, eyeGlow, jaw) {
+function drawPiece(ctx, name, sk, u, eyeGlow, jaw, nod = 0) {
   ctx.fillStyle = BONE; ctx.strokeStyle = BONE; ctx.lineCap = 'round';
   switch (name) {
     case 'skull': {
       const r = 0.62 * u;
+      if (nod) ctx.scale(1, 1 - 0.12 * Math.min(nod, 1.5)); // looking down
       ctx.beginPath(); ctx.ellipse(0, -r * 0.15, r * 0.9, r, 0, 0, 7); ctx.fill();
       ctx.beginPath(); ctx.roundRect(-r * 0.55, r * 0.45, r * 1.1, r * 0.45, r * 0.15); ctx.fill();
       // jaw (chatters to the beat)
@@ -310,6 +366,7 @@ function render(t) {
   const rattleAmp = smooth(T_RATTLE0, T_ASM0, t) * (1 - smooth(T_ASM0 + 2, T_ASM0 + 6, t));
   const life = smooth(T_STAND0, T_STAND1, t) * (1 - smooth(T_FALL0, T_FALL0 + 1.5, t));
   const danceIn = smooth(T_DANCE0, T_DANCE0 + 2.5, t) * (1 - smooth(T_FALL0 - 1.5, T_FALL0, t));
+  const w = wildness(t);
 
   // ground dust
   for (const d of DUST) {
@@ -350,12 +407,15 @@ function render(t) {
         const k = ease(clamp((t - T_ASM0 - sc.delay) / 2.2, 0, 1));
         x = lerp(sc.x, tp.x, k); y = lerp(sc.y, tp.y, k) - Math.sin(k * Math.PI) * sc.arc; rot = lerpAng(sc.rot, tp.rot, k);
         if (k < 1 && k > 0) rot += Math.sin(k * Math.PI) * 2 * (sc.jit % 2 > 1 ? 1 : -1);
+        if (w > 0) { x += Math.sin(t * 43 + sc.jit) * 3 * w; y += Math.sin(t * 37 + sc.jit * 2) * 3 * w; rot += Math.sin(t * 29 + sc.jit) * 0.08 * w; }
       } else {
         const k = easeIn(clamp((t - T_FALL0 - sc.fallDelay) / (T_FALL1 - T_FALL0), 0, 1));
         x = lerp(tp.x, sc.x, k); y = lerp(tp.y, sc.y, k) - Math.sin(k * Math.PI) * 40; rot = lerpAng(tp.rot, sc.rot, k);
       }
       c.save(); c.translate(x, y); c.rotate(rot);
-      drawPiece(c, name, sk, u, life, name === 'skull' ? (tp.jaw || 0) * danceIn : 0);
+      const isSkull = name === 'skull';
+      drawPiece(c, name, sk, u, Math.min(1, life * (0.75 + 0.25 * w * Math.abs(Math.sin(t * Math.PI * SONG_BPM / 60))) / 0.75),
+        isSkull ? (tp.jaw || 0) * danceIn : 0, isSkull ? (tp.nod || 0) * danceIn : 0);
       c.restore();
     }
     c.globalAlpha = 1;
@@ -367,7 +427,7 @@ function render(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(scene, 0, 0);
   gctx.clearRect(0, 0, glow.width, glow.height); gctx.filter = 'blur(6px)'; gctx.drawImage(scene, 0, 0, glow.width, glow.height); gctx.filter = 'none';
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 + 0.35 * life; ctx.drawImage(glow, 0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.55 + 0.35 * life + 0.35 * w * Math.pow(Math.abs(Math.cos(t * Math.PI * SONG_BPM / 60)), 4)); ctx.drawImage(glow, 0, 0, W, H);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 
@@ -376,11 +436,16 @@ window.renderAt = render;
 window.LOOP = LOOP;
 
 if (!new URLSearchParams(location.search).has('render')) {
-  const t0 = performance.now();
-  const tick = now => { render((now - t0) / 1000); requestAnimationFrame(tick); };
+  // Holds on the first frame until tapped, so you can start it together with the song.
+  let t0 = null;
+  const hint = document.getElementById('hint');
+  const tick = now => { render(t0 === null ? 0 : (now - t0) / 1000); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
-  document.addEventListener('click', () => { document.documentElement.requestFullscreen?.(); });
-  setTimeout(() => { document.getElementById('hint').style.opacity = 0; }, 4000);
+  document.addEventListener('click', () => {
+    if (t0 === null) { t0 = performance.now(); hint.style.opacity = 0; }
+    try { document.documentElement.requestFullscreen?.()?.catch(() => {}); } catch (e) {}
+    try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) {}
+  });
 } else {
   document.getElementById('hint').remove();
 }
