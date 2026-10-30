@@ -15,7 +15,7 @@
 </head>
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
-<div id="hint">Start the song, then tap here to start the bones</div>
+<div id="hint">Plays on repeat &middot; tap anytime to restart from 0:00</div>
 <script>
 // ---------- Config ----------
 const W = 1920, H = 1080;
@@ -436,13 +436,14 @@ window.renderAt = render;
 window.LOOP = LOOP;
 
 if (!new URLSearchParams(location.search).has('render')) {
-  // Holds on the first frame until tapped, so you can start it together with the song.
-  let t0 = null;
+  // Plays immediately and repeats forever. A tap restarts from 0:00 so you can line it up with the song.
+  let t0 = performance.now();
   const hint = document.getElementById('hint');
-  const tick = now => { render(t0 === null ? 0 : (now - t0) / 1000); requestAnimationFrame(tick); };
+  setTimeout(() => { hint.style.opacity = 0; }, 8000);
+  const tick = now => { render((now - t0) / 1000); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
   document.addEventListener('click', () => {
-    if (t0 === null) { t0 = performance.now(); hint.style.opacity = 0; }
+    t0 = performance.now(); hint.style.opacity = 0;
     try { document.documentElement.requestFullscreen?.()?.catch(() => {}); } catch (e) {}
     try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) {}
   });

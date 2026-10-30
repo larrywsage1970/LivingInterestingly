@@ -8,7 +8,7 @@ together bone to bone, rise, and dance, with resurrection scriptures (KJV) on sc
 
 | File | Use it when |
 |---|---|
-| `dry-bones-loop.html` | **Recommended for iPad + Spotify.** Open in Safari, start the song, tap to start the bones. Loops forever. |
+| `dry-bones-loop.html` | **Recommended for iPad + Spotify.** Open in Safari. Starts on its own and repeats forever. |
 | `dry-bones-rattle-4m36s-1080p.mp4` | Media player, USB stick, Fire TV/Roku, or a projector's built-in player. Set the player to **Repeat**. |
 
 ## Story timeline (repeats every 4:36)
@@ -31,14 +31,14 @@ together bone to bone, rise, and dance, with resurrection scriptures (KJV) on sc
 2. **Stop the screen from sleeping:** Settings → Display & Brightness → Auto-Lock → **Never**.
 3. **Spotify:** Open "Rattle!", turn on **Repeat One** (tap repeat twice until it shows a "1"). Play the audio through a
    Bluetooth speaker, or through the projector if it has speakers.
-4. **The bones:** Open `dry-bones-loop.html` (or the claude.ai link) in Safari. It holds on the first frame.
-5. **Sync:** Restart the song from 0:00 in Spotify, switch to Safari, and tap the screen. The bones start, and the wild part
+4. **The bones:** Open `dry-bones-loop.html` (or the claude.ai link) in Safari. It starts playing and repeats on its own.
+5. **Sync (optional):** Restart the song from 0:00 in Spotify, switch to Safari, and tap the screen. The bones restart from 0:00, and the wild part
    lines up with 3:00 in the song. Spotify keeps playing because the page makes no sound.
 6. **Optional, keeps guests from swiping away:** Settings → Accessibility → Guided Access → On, then triple-click the top
    button in Safari.
 
-Spotify adds a small gap when it repeats, so after a few hours the two can drift a few seconds. If they drift, reload the
-page and tap at the start of the song.
+Spotify adds a small gap when it repeats, so after a few hours the two can drift a few seconds. If they drift, tap the screen
+at the start of the song to restart the bones.
 
 Why not the MP4 on iPad? Playing a video in Photos can pause Spotify. The web page has no audio, so Spotify keeps playing.
 
