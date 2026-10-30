@@ -1,7 +1,7 @@
 # Dry Bones Live — Halloween Garage Projection
 
-A 4:36 seamless animation loop timed to Elevation Worship's "Rattle!" (76 BPM): scattered dry bones rattle, come
-together bone to bone, rise, and dance, with resurrection scriptures (KJV) on screen. The dancing builds to a wild peak at
+A 4:36 seamless animation loop timed to Elevation Worship's "Rattle!" (76 BPM): one skeleton comes to life first, then
+the rest join one by one until all nine are dancing by 3:00, with resurrection scriptures (KJV) on screen. The dancing builds to a wild peak at
 3:00, and two skeletons spend the song bobbing their heads to the beat.
 
 ## Files
@@ -16,10 +16,10 @@ together bone to bone, rise, and dance, with resurrection scriptures (KJV) on sc
 | Time | On screen | Scripture |
 |---|---|---|
 | 0:00 | Valley of scattered bones | Ezekiel 37:3 |
-| 0:08 | Bones begin to rattle | Ezekiel 37:4 |
-| 0:19 | Bones fly together, bone to bone | Ezekiel 37:7 |
-| 0:30 | Breath swirls in, eyes light, skeletons stand | Ezekiel 37:10 |
-| 0:35 | The army dances; two skeletons bob their heads to the beat | Ezekiel 37:14, 2 Kings 13:21, Isaiah 26:19, John 11:25, John 5:25, Luke 15:24, Romans 8:11, Ephesians 2:5, Psalm 30:11, Psalm 149:3, Acts 2:24 |
+| 0:08 | The center skeleton's bones begin to rattle | Ezekiel 37:4 |
+| 0:19 | Its bones fly together, bone to bone | Ezekiel 37:7 |
+| 0:30 | Breath swirls in, eyes light, the first skeleton stands and dances | Ezekiel 37:5 |
+| 0:35–2:51 | Another skeleton rattles, assembles, and rises every 17 seconds; two of them just bob their heads to the beat | Ezekiel 37:14, 2 Kings 13:21, Isaiah 26:19, John 11:25, John 5:25, Luke 15:24, Romans 8:11, Ephesians 2:5, Psalm 30:11, Psalm 149:3, Ezekiel 37:10 |
 | 2:45–3:00 | Dancing builds; bones start shaking loose | 2 Samuel 6:14 ("danced … with all his might") |
 | 3:00–4:08 | **Wild:** windmill flailing, high kicks, headbanging, pulsing glow and eyes | 1 Corinthians 15:52, Revelation 1:18, Psalm 150:4, Hosea 13:14, Matthew 28:6 |
 | 4:08–4:20 | Dancing calms | 1 Corinthians 15:57 |
