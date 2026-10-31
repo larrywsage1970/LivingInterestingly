@@ -16,12 +16,12 @@
 <script>
 // ---------- Config ----------
 const W = 1920, H = 1080;
-const LOOP = 276;            // seconds (4:36, the length of "Rattle!"); animation repeats seamlessly
+const LOOP = 432;            // seconds (7:12, the length of "Rattle!"); animation repeats seamlessly
 const SONG_BPM = 76;         // "Rattle!" tempo; head nods land on this beat
 const BPM = SONG_BPM * 2;    // dance moves run double time
 const BONE = '#f3eedf';
-const GLOW = 'rgba(150,200,255,0.55)';
 const GOLD = '#e8b84a';
+const FLOWER_COLORS = ['#ff6f91', '#ffd23f', '#ffffff', '#c77dff', '#ff595e', '#ff9f1c', '#7bdff2'];
 
 // KJV (public domain). [start, end, text, reference]
 const VERSES = [
@@ -31,31 +31,53 @@ const VERSES = [
   [30,  40,  'Behold, I will cause breath to enter into you, and ye shall live.', 'Ezekiel 37:5'],
   [40,  52,  'And shall put my spirit in you, and ye shall live.', 'Ezekiel 37:14'],
   [52,  64,  'When the man was let down, and touched the bones of Elisha, he revived, and stood up on his feet.', '2 Kings 13:21'],
-  [64,  76,  'Thy dead men shall live\u2026 Awake and sing, ye that dwell in dust.', 'Isaiah 26:19'],
+  [64,  76,  'Thy dead men shall live… Awake and sing, ye that dwell in dust.', 'Isaiah 26:19'],
   [76,  88,  'I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live.', 'John 11:25'],
   [88,  100, 'The dead shall hear the voice of the Son of God: and they that hear shall live.', 'John 5:25'],
-  [100, 112, 'For this my son was dead, and is alive again; he was lost, and is found.', 'Luke 15:24'],
-  [112, 124, 'He that raised up Christ from the dead shall also quicken your mortal bodies by his Spirit that dwelleth in you.', 'Romans 8:11'],
-  [124, 136, 'Even when we were dead in sins, hath quickened us together with Christ.', 'Ephesians 2:5'],
-  [136, 148, 'Thou hast turned for me my mourning into dancing.', 'Psalm 30:11'],
-  [148, 160, 'Let them praise his name in the dance.', 'Psalm 149:3'],
-  [160, 172, 'The breath came into them, and they lived, and stood up upon their feet, an exceeding great army.', 'Ezekiel 37:10'],
-  [172, 186, 'And David danced before the LORD with all his might.', '2 Samuel 6:14'],
-  [186, 198, 'The trumpet shall sound, and the dead shall be raised incorruptible.', '1 Corinthians 15:52'],
-  [198, 210, 'I am he that liveth, and was dead; and, behold, I am alive for evermore.', 'Revelation 1:18'],
-  [210, 222, 'Praise him with the timbrel and dance: praise him with stringed instruments and organs.', 'Psalm 150:4'],
-  [222, 234, 'O death, I will be thy plagues; O grave, I will be thy destruction.', 'Hosea 13:14'],
-  [234, 246, 'He is not here: for he is risen, as he said.', 'Matthew 28:6'],
-  [246, 260, 'But thanks be to God, which giveth us the victory through our Lord Jesus Christ.', '1 Corinthians 15:57'],
-  [260, 276, 'O death, where is thy sting? O grave, where is thy victory?', '1 Corinthians 15:55'],
+  [100, 108, 'For this my son was dead, and is alive again; he was lost, and is found.', 'Luke 15:24'],
+  [108, 120, 'And there appeared unto them cloven tongues like as of fire, and it sat upon each of them.', 'Acts 2:3'],
+  [120, 132, 'He that raised up Christ from the dead shall also quicken your mortal bodies by his Spirit that dwelleth in you.', 'Romans 8:11'],
+  [132, 144, 'Even when we were dead in sins, hath quickened us together with Christ.', 'Ephesians 2:5'],
+  [144, 156, 'Thou hast turned for me my mourning into dancing.', 'Psalm 30:11'],
+  [156, 168, 'Let them praise his name in the dance.', 'Psalm 149:3'],
+  [168, 180, 'The breath came into them, and they lived, and stood up upon their feet, an exceeding great army.', 'Ezekiel 37:10'],
+  [180, 189, 'Be still, and know that I am God.', 'Psalm 46:10'],
+  [189, 200, 'And David danced before the LORD with all his might.', '2 Samuel 6:14'],
+  [200, 212, 'The trumpet shall sound, and the dead shall be raised incorruptible.', '1 Corinthians 15:52'],
+  [212, 224, 'I am he that liveth, and was dead; and, behold, I am alive for evermore.', 'Revelation 1:18'],
+  [224, 236, 'Praise him with the timbrel and dance: praise him with stringed instruments and organs.', 'Psalm 150:4'],
+  [236, 248, 'O death, I will be thy plagues; O grave, I will be thy destruction.', 'Hosea 13:14'],
+  [248, 260, 'He is not here: for he is risen, as he said.', 'Matthew 28:6'],
+  [260, 272, 'His word was in mine heart as a burning fire shut up in my bones.', 'Jeremiah 20:9'],
+  [272, 284, 'But thanks be to God, which giveth us the victory through our Lord Jesus Christ.', '1 Corinthians 15:57'],
+  [284, 296, 'Like as Christ was raised up from the dead by the glory of the Father, even so we also should walk in newness of life.', 'Romans 6:4'],
+  [296, 308, 'I will… put breath in you, and ye shall live; and ye shall know that I am the LORD.', 'Ezekiel 37:6'],
+  [308, 320, 'To give unto them beauty for ashes, the oil of joy for mourning, the garment of praise for the spirit of heaviness.', 'Isaiah 61:3'],
+  [320, 329, 'In thy presence is fulness of joy.', 'Psalm 16:11'],
+  [329, 341, 'The flowers appear on the earth; the time of the singing of birds is come.', 'Song of Solomon 2:12'],
+  [341, 353, 'The desert shall rejoice, and blossom as the rose.', 'Isaiah 35:1'],
+  [353, 365, 'Behold, how good and how pleasant it is for brethren to dwell together in unity!', 'Psalm 133:1'],
+  [365, 377, 'There is one body, and one Spirit, even as ye are called in one hope of your calling.', 'Ephesians 4:4'],
+  [377, 389, 'The grass withereth, the flower fadeth: but the word of our God shall stand for ever.', 'Isaiah 40:8'],
+  [389, 404, 'O death, where is thy sting? O grave, where is thy victory?', '1 Corinthians 15:55'],
+  [404, 417, 'The dead in Christ shall rise first… caught up together with them in the clouds, to meet the Lord in the air.', '1 Thessalonians 4:16–17'],
+  [417, 431, 'And God shall wipe away all tears from their eyes; and there shall be no more death.', 'Revelation 21:4'],
 ];
 
 // Phase timings (seconds)
-const T_DANCE0 = 35; // first skeleton starts dancing; also the dance beat's zero point
-const T_FALL0 = 262, T_FALL1 = 267;
-// Wild section: builds from 2:45, full intensity at 3:00, eases off before the collapse
-const T_WILD0 = 165, T_WILD1 = 180, T_WILD2 = 248, T_WILD3 = 257;
-const wildness = t => smooth(T_WILD0, T_WILD1, t) * (1 - smooth(T_WILD2, T_WILD3, t));
+const T_DANCE0 = 35;                 // first skeleton dances; also the dance beat's zero point
+const T_FIRE0 = 108;                 // 1:48 fire builds in the background
+const T_NOD0 = 180, T_NOD1 = 188;    // 3:00 everyone slows down and nods together
+const T_TOGETHER = 329;              // 5:29 synchronized dance with flowers
+const T_ASC = 405;                   // 6:45 bones rise up in rays of light
+const T_BLACK0 = 426, T_BLACK1 = 431; // fade to black, ready to restart at 7:12
+const nodTogether = t => smooth(T_NOD0 - 3, T_NOD0, t) * (1 - smooth(T_NOD1, T_NOD1 + 3, t));
+// after the nod, each skeleton works up to wild dancing on its own schedule
+const wildness = (sk, t) => smooth(T_NOD1 + sk.wildDelay, T_NOD1 + sk.wildDelay + 14, t) * (1 - smooth(T_TOGETHER - 4, T_TOGETHER, t));
+const together = t => smooth(T_TOGETHER - 2, T_TOGETHER + 1, t);
+const bloom = t => smooth(T_TOGETHER, T_TOGETHER + 4, t);
+const fireLevel = t => smooth(T_FIRE0, T_FIRE0 + 14, t) * (1 - smooth(T_ASC, T_ASC + 8, t)) *
+  (0.8 + 0.4 * smooth(T_NOD1 + 5, T_NOD1 + 20, t) * (1 - smooth(T_TOGETHER - 4, T_TOGETHER, t)) - 0.25 * bloom(t));
 
 // ---------- Deterministic random ----------
 function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
@@ -82,6 +104,8 @@ SKELETONS.forEach((s, i) => {
   s.lieDir = -1;
   s.listener = i === 3 || i === 5; // these two just bob their heads to the music
   s.alive = { tR: 0, tA: 0, tS0: 0, tS1: 0, tD: 0, spread: 3 };
+  s.wildDelay = ((i * 0.618) % 1) * 9;
+  s.flower = FLOWER_COLORS[i % FLOWER_COLORS.length];
 });
 
 const PIECES = ['spine', 'ribs', 'pelvis', 'skull',
@@ -95,6 +119,7 @@ WAKE_ORDER.forEach((i, n) => {
   const a = SKELETONS[i].alive;
   if (n === 0) Object.assign(a, { tR: 8, tA: 19, tS0: 30, tS1: 35, tD: 35, spread: 5.5 });
   else { const tD = 35 + n * 17; Object.assign(a, { tR: tD - 17, tA: tD - 13, tS0: tD - 5, tS1: tD, tD, spread: 3 }); }
+  SKELETONS[i].tAsc = T_ASC + (8 - n) * 1.25; // last to wake is first to rise
 });
 
 // Scattered resting spots for every bone (on the ground, random rotations)
@@ -177,28 +202,42 @@ const REST = { lean: 0, bob: 0, sx: 0, shL: 0.12, elL: 0.05, shR: -0.12, elR: -0
 function mixPose(a, b, k) { const o = {}; for (const key in a) o[key] = lerp(a[key], b[key], k); return o; }
 
 function dancePose(sk, t) {
-  const beat = (t - T_DANCE0) * BPM / 60 + (sk.listener ? 0 : sk.phase);
+  const b0 = (t - T_DANCE0) * BPM / 60;            // shared beat
+  const beat = b0 + (sk.listener ? 0 : sk.phase);  // this skeleton's own groove
   const seg = 8; // seconds per move
   const idx = Math.floor((t - T_DANCE0) / seg);
   const f = ((t - T_DANCE0) / seg) - idx;
   const blend = smooth(0.85, 1, f);
-  let base;
-  if (sk.listener) base = move(5, beat);
+  let P;
+  if (sk.listener) P = move(5, beat);
   else {
     const m0 = (idx + sk.moveOffset) % 5, m1 = (idx + 1 + sk.moveOffset) % 5;
-    base = mixPose(move(m0, beat), move(m1, beat), blend);
+    P = mixPose(move(m0, beat), move(m1, beat), blend);
   }
-  const w = wildness(t);
-  if (w <= 0) return base;
-  // wild: listeners headbang; dancers cycle flail / headbang / high kicks
-  let wild;
-  if (sk.listener) wild = move(7, beat);
-  else {
-    const WILD = [6, 7, 8, 6, 8];
-    const w0 = WILD[(idx + sk.moveOffset) % 5], w1 = WILD[(idx + 1 + sk.moveOffset) % 5];
-    wild = mixPose(move(w0, beat), move(w1, beat), blend);
+  // wild, each on its own: listeners headbang; dancers cycle flail / headbang / high kicks
+  const w = wildness(sk, t);
+  if (w > 0) {
+    let wild;
+    if (sk.listener) wild = move(7, beat);
+    else {
+      const WILD = [6, 7, 8, 6, 8];
+      wild = mixPose(move(WILD[(idx + sk.moveOffset) % 5], beat), move(WILD[(idx + 1 + sk.moveOffset) % 5], beat), blend);
+    }
+    P = mixPose(P, wild, w);
   }
-  return mixPose(base, wild, w);
+  // 3:00 slow down: everyone nods together on the song's beat
+  const nw = nodTogether(t);
+  if (nw > 0) P = mixPose(P, move(5, b0), nw);
+  // 5:29 everyone dances the same moves in sync
+  const tw = together(t);
+  if (tw > 0) {
+    const M = [0, 1, 3, 4], j = Math.max(0, Math.floor((t - T_TOGETHER) / seg)), g = smooth(0.85, 1, ((t - T_TOGETHER) / seg) - j);
+    P = mixPose(P, mixPose(move(M[j % 4], b0), move(M[(j + 1) % 4], b0), g), tw);
+  }
+  // 6:45 arms lift in praise as they rise
+  const aw = smooth(sk.tAsc - 4, sk.tAsc, t);
+  if (aw > 0) P = mixPose(P, move(0, b0 * 0.25), aw);
+  return P;
 }
 
 // Forward kinematics → piece transforms {x, y, rot, jaw}
@@ -260,7 +299,13 @@ function longBone(ctx, len, w) {
     ctx.beginPath(); ctx.arc(-r * 0.45, y, r * 0.55, 0, 7); ctx.arc(r * 0.45, y, r * 0.55, 0, 7); ctx.fill();
   }
 }
-function drawPiece(ctx, name, sk, u, eyeGlow, jaw, nod = 0) {
+function drawFlower(ctx, x, y, r, color, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = color;
+  for (let i = 0; i < 6; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.ellipse(0, -r * 0.55, r * 0.32, r * 0.55, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#ffcf33'; ctx.beginPath(); ctx.arc(0, 0, r * 0.3, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawPiece(ctx, name, sk, u, eyeGlow, jaw, nod = 0, flower = 0) {
   ctx.fillStyle = BONE; ctx.strokeStyle = BONE; ctx.lineCap = 'round';
   switch (name) {
     case 'skull': {
@@ -322,6 +367,7 @@ function drawPiece(ctx, name, sk, u, eyeGlow, jaw, nod = 0) {
       ctx.beginPath(); ctx.ellipse(0, -u * 0.08, u * 0.13, u * 0.12, 0, 0, 7); ctx.fill();
       ctx.lineWidth = u * 0.055;
       for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * u * 0.05, 0); ctx.lineTo(i * u * 0.08, u * 0.3); ctx.stroke(); }
+      if (flower > 0) drawFlower(ctx, 0, u * 0.45, u * 0.42 * flower, sk.flower, sk.x * 0.01);
       break;
     }
     case 'footL': case 'footR': {
@@ -336,6 +382,70 @@ function drawPiece(ctx, name, sk, u, eyeGlow, jaw, nod = 0) {
 // ---------- Particles (dust, breath) ----------
 const DUST = Array.from({ length: 140 }, () => ({ x: R() * W, y: 700 + R() * 380, s: 1 + R() * 2.5, sp: 0.3 + R(), ph: R() * 100 }));
 const BREATH = Array.from({ length: 220 }, () => ({ a: R() * Math.PI * 2, r: 200 + R() * 900, sp: 0.4 + R() * 0.9, s: 1 + R() * 2.2, ph: R() }));
+const FIRE = Array.from({ length: 520 }, () => ({ x: R() * W, sp: 0.5 + R(), s: 1.5 + R() * 3, ph: R(), wob: R() * 10, big: R() < 0.22 }));
+const GROUND_FLOWERS = Array.from({ length: 110 }, (_, i) => {
+  const back = i % 3 === 0;
+  return { x: R() * W, y: back ? 872 + R() * 12 : 1040 + R() * 34, r: (back ? 7 : 11) + R() * (back ? 6 : 12), stem: (back ? 12 : 22) + R() * (back ? 18 : 40),
+           color: FLOWER_COLORS[Math.floor(R() * FLOWER_COLORS.length)], delay: R() * 9, sway: R() * 10, back };
+});
+const PETALS = Array.from({ length: 110 }, () => ({ x: R() * W, sp: 0.5 + R(), ph: R(), s: 4 + R() * 6, spin: R() * 10, color: FLOWER_COLORS[Math.floor(R() * FLOWER_COLORS.length)] }));
+const SPARKS = Array.from({ length: 40 }, () => ({ dx: R() - 0.5, sp: 0.5 + R(), ph: R(), s: 1 + R() * 2 }));
+
+function drawFire(c, t, lvl) {
+  if (lvl <= 0) return;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const g = c.createLinearGradient(0, H, 0, H - 420);
+  g.addColorStop(0, `rgba(255,90,20,${0.28 * lvl})`); g.addColorStop(1, 'rgba(255,60,0,0)');
+  c.fillStyle = g; c.fillRect(0, H - 420, W, 420);
+  for (const p of FIRE) {
+    const k = (t * p.sp * 0.17 + p.ph) % 1, y = H + 20 - k * H * 0.62;
+    const x = p.x + Math.sin(t * 1.3 + p.wob) * 30 * k;
+    const flick = 0.75 + 0.25 * Math.sin(t * 9 + p.wob * 3);
+    const r = p.s * (1 - k * 0.6) * (p.big ? 7 : 1);
+    const [cr, cg, cb] = k < 0.3 ? [255, 210, 110] : k < 0.65 ? [255, 130, 40] : [210, 50, 20];
+    c.fillStyle = `rgba(${cr},${cg},${cb},${lvl * (1 - k) * flick * (p.big ? 0.07 : 0.75)})`;
+    c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+  }
+  c.restore();
+}
+
+function drawRay(c, sk, t, lvl) {
+  if (lvl <= 0) return;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const top = sk.h * 0.25, bot = sk.h * 0.95;
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, `rgba(255,246,220,${0.28 * lvl})`); g.addColorStop(0.45, `rgba(255,244,214,${0.34 * lvl})`); g.addColorStop(1, `rgba(255,236,190,${0.14 * lvl})`);
+  c.fillStyle = g; c.beginPath();
+  c.moveTo(sk.x - top / 2, 0); c.lineTo(sk.x + top / 2, 0); c.lineTo(sk.x + bot / 2, H); c.lineTo(sk.x - bot / 2, H); c.fill();
+  for (const p of SPARKS) {
+    const k = (t * p.sp * 0.3 + p.ph) % 1, y = sk.ground - k * sk.ground, wdt = lerp(bot, top, k);
+    c.fillStyle = `rgba(255,250,230,${lvl * (1 - k) * 0.9})`; c.beginPath(); c.arc(sk.x + p.dx * wdt * 0.8, y, p.s, 0, 7); c.fill();
+  }
+  c.restore();
+}
+
+function drawGroundFlowers(c, t, back) {
+  const bl = bloom(t);
+  if (bl <= 0) return;
+  for (const f of GROUND_FLOWERS) {
+    if (f.back !== back) continue;
+    const g = smooth(T_TOGETHER + f.delay, T_TOGETHER + f.delay + 3, t);
+    if (g <= 0) continue;
+    const sw = Math.sin(t * 1.5 + f.sway) * 0.12, tx = f.x + Math.sin(sw) * f.stem * g, ty = f.y - f.stem * g;
+    c.strokeStyle = '#5fae4a'; c.lineWidth = back ? 2 : 3; c.beginPath(); c.moveTo(f.x, f.y); c.quadraticCurveTo(f.x, (f.y + ty) / 2, tx, ty); c.stroke();
+    drawFlower(c, tx, ty, f.r * g, f.color, f.sway + t * 0.2);
+  }
+}
+
+function drawPetals(c, t) {
+  const bl = bloom(t);
+  if (bl <= 0) return;
+  for (const p of PETALS) {
+    const y = 430 + ((t * 32 * p.sp + p.ph * 650) % 650), x = p.x + Math.sin(t * 0.7 * p.sp + p.ph * 10) * 70;
+    c.save(); c.globalAlpha = bl * 0.85; c.translate(x, y); c.rotate(t * p.sp + p.spin); c.fillStyle = p.color;
+    c.beginPath(); c.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, 7); c.fill(); c.restore();
+  }
+}
 
 // ---------- Scene ----------
 const canvas = document.getElementById('c');
@@ -370,22 +480,28 @@ function render(t) {
   const c = sctx;
   c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
 
-  const w = wildness(t);
-  const fallOut = 1 - smooth(T_FALL0, T_FALL0 + 1.5, t);
   const first = SKELETONS[WAKE_ORDER[0]].alive;
-  const firstLife = smooth(first.tS0, first.tS1, t) * fallOut;
+  const firstLife = smooth(first.tS0, first.tS1, t);
+  const fl = bloom(t);
 
   // ground dust
   for (const d of DUST) {
     const x = (d.x + Math.sin(t * 0.2 * d.sp + d.ph) * 40) % W, y = d.y + Math.sin(t * d.sp + d.ph) * 6;
     c.fillStyle = 'rgba(200,210,230,0.12)'; c.beginPath(); c.arc(x, y, d.s, 0, 7); c.fill();
   }
+  drawFire(c, t, fireLevel(t));
+  for (const sk of SKELETONS) drawRay(c, sk, t, smooth(sk.tAsc - 4, sk.tAsc - 1, t) * (1 - smooth(sk.tAsc + 8, sk.tAsc + 12, t)));
+  drawGroundFlowers(c, t, true);
 
-  for (const sk of SKELETONS) {
+  SKELETONS.forEach((sk, si) => {
+    if (si === 4) drawGroundFlowers(c, t, false); // front-row flowers sit behind the front skeletons' feet
     const u = sk.h / 8, A = sk.alive;
     const rattleAmp = smooth(A.tR, A.tA, t) * (1 - smooth(A.tA + 2, A.tA + 6, t));
-    const life = smooth(A.tS0, A.tS1, t) * fallOut;
-    const danceIn = smooth(A.tD, A.tD + 2.5, t) * (1 - smooth(T_FALL0 - 1.5, T_FALL0, t));
+    const life = smooth(A.tS0, A.tS1, t);
+    const danceIn = smooth(A.tD, A.tD + 2.5, t);
+    const w = wildness(sk, t);
+    const asc = clamp((t - sk.tAsc) / 9, 0, 1);
+    if (asc >= 1) return;
     // breath wind: particles spiral in around this skeleton as it stands
     const bw = smooth(A.tS0 - 2, A.tS0, t) * (1 - smooth(A.tS1, A.tS1 + 2, t));
     if (bw > 0) {
@@ -408,40 +524,49 @@ function render(t) {
       for (const k in pose) pose[k].y = Math.min(pose[k].y, sk.ground - 6);
     }
 
-    c.globalAlpha = sk.alpha;
+    const eyes = Math.min(1, life * (0.75 + 0.25 * w * Math.abs(Math.sin(t * Math.PI * SONG_BPM / 60))) / 0.75);
     for (const name of PIECES) {
       const sc = sk.scatter[name], tp = pose[name];
-      let x, y, rot;
-      if (t < A.tA || t >= T_FALL1 + sc.fallDelay) {
+      let x, y, rot, alpha = sk.alpha;
+      if (t < A.tA) {
         x = sc.x; y = sc.y; rot = sc.rot;
         const j = rattleAmp * (0.5 + 0.5 * Math.sin(t * 3 + sc.jit));
         x += Math.sin(t * 47 + sc.jit) * 4 * j; y -= Math.abs(Math.sin(t * 31 + sc.jit)) * 14 * j; rot += Math.sin(t * 39 + sc.jit) * 0.15 * j;
-      } else if (t < T_FALL0) {
+      } else {
         const k = ease(clamp((t - A.tA - sc.delay * A.spread / 5.5) / 2.2, 0, 1));
         x = lerp(sc.x, tp.x, k); y = lerp(sc.y, tp.y, k) - Math.sin(k * Math.PI) * sc.arc; rot = lerpAng(sc.rot, tp.rot, k);
         if (k < 1 && k > 0) rot += Math.sin(k * Math.PI) * 2 * (sc.jit % 2 > 1 ? 1 : -1);
         if (w > 0) { x += Math.sin(t * 43 + sc.jit) * 3 * w; y += Math.sin(t * 37 + sc.jit * 2) * 3 * w; rot += Math.sin(t * 29 + sc.jit) * 0.08 * w; }
-      } else {
-        const k = easeIn(clamp((t - T_FALL0 - sc.fallDelay) / (T_FALL1 - T_FALL0), 0, 1));
-        x = lerp(tp.x, sc.x, k); y = lerp(tp.y, sc.y, k) - Math.sin(k * Math.PI) * 40; rot = lerpAng(tp.rot, sc.rot, k);
+        if (asc > 0) {
+          // rise into the light: bones drift gently apart as they go up and fade into the beam
+          const a2 = asc * asc;
+          y -= a2 * (sk.ground + 200 + sc.arc * 1.5);
+          x += Math.sin(asc * 3 + sc.jit) * 25 * asc;
+          rot += asc * ((sc.jit % 1) - 0.5) * 2;
+          alpha *= 1 - smooth(0.5, 1, asc);
+        }
       }
-      c.save(); c.translate(x, y); c.rotate(rot);
-      const isSkull = name === 'skull';
-      drawPiece(c, name, sk, u, Math.min(1, life * (0.75 + 0.25 * w * Math.abs(Math.sin(t * Math.PI * SONG_BPM / 60))) / 0.75),
-        isSkull ? (tp.jaw || 0) * danceIn : 0, isSkull ? (tp.nod || 0) * danceIn : 0);
+      c.save(); c.globalAlpha = alpha; c.translate(x, y); c.rotate(rot);
+      const isSkull = name === 'skull', isHand = name === 'handL' || name === 'handR';
+      drawPiece(c, name, sk, u, Math.max(eyes, asc > 0 ? 1 : 0),
+        isSkull ? (tp.jaw || 0) * danceIn : 0, isSkull ? (tp.nod || 0) * danceIn : 0, isHand ? fl : 0);
       c.restore();
     }
-    c.globalAlpha = 1;
-  }
+  });
+  drawPetals(c, t);
 
   drawText(c, t);
 
   // composite with a soft glow
+  const wAvg = wildness(SKELETONS[6], t);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(scene, 0, 0);
   gctx.clearRect(0, 0, glow.width, glow.height); gctx.filter = 'blur(6px)'; gctx.drawImage(scene, 0, 0, glow.width, glow.height); gctx.filter = 'none';
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.55 + 0.35 * firstLife + 0.35 * w * Math.pow(Math.abs(Math.cos(t * Math.PI * SONG_BPM / 60)), 4)); ctx.drawImage(glow, 0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.55 + 0.35 * firstLife + 0.35 * wAvg * Math.pow(Math.abs(Math.cos(t * Math.PI * SONG_BPM / 60)), 4)); ctx.drawImage(glow, 0, 0, W, H);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // fade in from black at the start, fade to black at the end
+  const vis = smooth(0, 2.5, t) * (1 - smooth(T_BLACK0, T_BLACK1, t));
+  if (vis < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - vis})`; ctx.fillRect(0, 0, W, H); }
 }
 
 // Exposed for offline video rendering
