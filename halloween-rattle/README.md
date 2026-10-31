@@ -8,7 +8,7 @@ the rest join one by one until all nine are dancing by 3:00, with resurrection s
 
 | File | Use it when |
 |---|---|
-| `dry-bones-loop.html` | **Recommended for iPad + Spotify.** Open in Safari. Starts on its own and repeats forever. |
+| `dry-bones-loop.html` | **Recommended for iPad + Spotify.** Open in Safari. Starts on its own and repeats forever; tap anytime to restart from 0:00. |
 | `dry-bones-rattle-4m36s-1080p.mp4` | Media player, USB stick, Fire TV/Roku, or a projector's built-in player. Set the player to **Repeat**. |
 
 ## Story timeline (repeats every 4:36)

@@ -9,13 +9,10 @@
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; cursor: none; }
   canvas { width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; background: #000; }
-  #hint { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; color: #8a8f99;
-          font: 20px sans-serif; transition: opacity 1s; }
 </style>
 </head>
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
-<div id="hint">Plays on repeat &middot; tap anytime to restart from 0:00</div>
 <script>
 // ---------- Config ----------
 const W = 1920, H = 1080;
@@ -454,17 +451,13 @@ window.LOOP = LOOP;
 if (!new URLSearchParams(location.search).has('render')) {
   // Plays immediately and repeats forever. A tap restarts from 0:00 so you can line it up with the song.
   let t0 = performance.now();
-  const hint = document.getElementById('hint');
-  setTimeout(() => { hint.style.opacity = 0; }, 8000);
   const tick = now => { render((now - t0) / 1000); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
   document.addEventListener('click', () => {
-    t0 = performance.now(); hint.style.opacity = 0;
+    t0 = performance.now();
     try { document.documentElement.requestFullscreen?.()?.catch(() => {}); } catch (e) {}
     try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) {}
   });
-} else {
-  document.getElementById('hint').remove();
 }
 </script>
 </body>
