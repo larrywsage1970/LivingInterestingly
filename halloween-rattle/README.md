@@ -22,7 +22,8 @@ rise up into beams of light. Resurrection scriptures (KJV) run the whole way thr
 | 0:35–2:51 | Another skeleton rises every 17 seconds; two of them bob their heads to the beat | Ezekiel 37:14, 2 Kings 13:21, Isaiah 26:19, John 11:25, John 5:25, Luke 15:24 |
 | 1:48 | Fire builds in the background, drifting embers like the breath | Acts 2:3, Romans 8:11, Ephesians 2:5, Psalm 30:11, Psalm 149:3, Ezekiel 37:10 |
 | 3:00–3:08 | Everyone slows down and nods their heads together | Psalm 46:10 |
-| 3:08–5:29 | Each skeleton works up to its own wild dance; fire burns brighter | 2 Samuel 6:14, 1 Corinthians 15:52, Revelation 1:18, Psalm 150:4, Hosea 13:14, Matthew 28:6, Jeremiah 20:9, 1 Corinthians 15:57, Romans 6:4, Ezekiel 37:6, Isaiah 61:3, Psalm 16:11 |
+| 3:08–5:15 | Each skeleton works up to its own wild dance; fire burns brighter | 2 Samuel 6:14, 1 Corinthians 15:52, Revelation 1:18, Psalm 150:4, Hosea 13:14, Matthew 28:6, Jeremiah 20:9, 1 Corinthians 15:57, Romans 6:4, Ezekiel 37:6, Isaiah 61:3 |
+| 5:19–5:29 | Everyone hits the "whoa" together, snapping side to side on the beat | Psalm 16:11 |
 | 5:29–6:45 | All dance the same moves together holding flowers; flowers sprout around them and petals float | Song of Solomon 2:12, Isaiah 35:1, Psalm 133:1, Ephesians 4:4, Isaiah 40:8, 1 Corinthians 15:55 |
 | 6:45–7:06 | A beam of light comes down on each skeleton; arms raised, its bones rise into the light | 1 Thessalonians 4:16–17, Revelation 21:4 |
 | 7:06–7:12 | Fade to black, ready to restart | |
@@ -67,7 +68,7 @@ Don't post that version publicly; YouTube and Facebook will flag it.
 
 Edit `dry-bones-loop.html`:
 - `VERSES`: wording, references, timing.
-- `T_FIRE0`, `T_NOD0`, `T_TOGETHER`, `T_ASC`: when the fire, nodding, flower dance, and rising begin.
+- `T_FIRE0`, `T_NOD0`, `T_WHOA`, `T_TOGETHER`, `T_ASC`: when the fire, nodding, whoa, flower dance, and rising begin.
 - `SONG_BPM`: tempo for head nods (76 for "Rattle!").
 - `s.listener`: which skeletons bob their heads.
 - `SKELETONS`, `BONE`, `GOLD`: positions, sizes, colors.

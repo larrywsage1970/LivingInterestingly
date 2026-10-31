@@ -68,12 +68,14 @@ const VERSES = [
 const T_DANCE0 = 35;                 // first skeleton dances; also the dance beat's zero point
 const T_FIRE0 = 108;                 // 1:48 fire builds in the background
 const T_NOD0 = 180, T_NOD1 = 188;    // 3:00 everyone slows down and nods together
+const T_WHOA = 319;                  // 5:19 everyone hits the whoa together
 const T_TOGETHER = 329;              // 5:29 synchronized dance with flowers
 const T_ASC = 405;                   // 6:45 bones rise up in rays of light
 const T_BLACK0 = 426, T_BLACK1 = 431; // fade to black, ready to restart at 7:12
 const nodTogether = t => smooth(T_NOD0 - 3, T_NOD0, t) * (1 - smooth(T_NOD1, T_NOD1 + 3, t));
 // after the nod, each skeleton works up to wild dancing on its own schedule
-const wildness = (sk, t) => smooth(T_NOD1 + sk.wildDelay, T_NOD1 + sk.wildDelay + 14, t) * (1 - smooth(T_TOGETHER - 4, T_TOGETHER, t));
+const wildness = (sk, t) => smooth(T_NOD1 + sk.wildDelay, T_NOD1 + sk.wildDelay + 14, t) * (1 - smooth(T_WHOA - 4, T_WHOA, t));
+const whoaLevel = t => smooth(T_WHOA - 1.5, T_WHOA, t) * (1 - smooth(T_TOGETHER - 1, T_TOGETHER + 1, t));
 const together = t => smooth(T_TOGETHER - 2, T_TOGETHER + 1, t);
 const bloom = t => smooth(T_TOGETHER, T_TOGETHER + 4, t);
 const fireLevel = t => smooth(T_FIRE0, T_FIRE0 + 14, t) * (1 - smooth(T_ASC, T_ASC + 8, t)) *
@@ -228,6 +230,9 @@ function dancePose(sk, t) {
   // 3:00 slow down: everyone nods together on the song's beat
   const nw = nodTogether(t);
   if (nw > 0) P = mixPose(P, move(5, b0), nw);
+  // 5:19 everyone hits the whoa together
+  const hw = whoaLevel(t);
+  if (hw > 0) P = mixPose(P, whoaPose(b0), hw);
   // 5:29 everyone dances the same moves in sync
   const tw = together(t);
   if (tw > 0) {
@@ -237,6 +242,22 @@ function dancePose(sk, t) {
   // 6:45 arms lift in praise as they rise
   const aw = smooth(sk.tAsc - 4, sk.tAsc, t);
   if (aw > 0) P = mixPose(P, move(0, b0 * 0.25), aw);
+  return P;
+}
+
+// "Hit the whoa": fists swing across the body and snap to a stop on each song beat, alternating sides
+function whoaSide(side) {
+  const P = { lean: -0.12 * side, bob: 0, sx: 0.04 * side, head: 0.22 * side, jaw: 1, nod: 0,
+              hipL: 0.25, knL: -0.35, hipR: -0.25, knR: 0.35 };
+  if (side > 0) Object.assign(P, { shL: -1.2, elL: -0.37, shR: -0.9, elR: -0.9 });
+  else Object.assign(P, { shL: 0.9, elL: 0.9, shR: 1.2, elR: 0.37 });
+  return P;
+}
+function whoaPose(b0) {
+  const songBeat = b0 / 2, n = Math.floor(songBeat), q = songBeat - n;
+  const cur = n % 2 ? 1 : -1;
+  const P = mixPose(whoaSide(-cur), whoaSide(cur), ease(clamp(q / 0.15, 0, 1)));
+  P.bob = -0.03 * Math.max(0, 1 - q * 4); // little dip on the hit
   return P;
 }
 
