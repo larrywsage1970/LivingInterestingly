@@ -1,44 +1,26 @@
-"""Temporary probe: CDC HAN via CDC's syndication API / page; CDC outbreak RSS; AirNow 410 body (key redacted)."""
+"""Temporary probe 2: CDC HAN archive JSON shape; AirNow retirement notice / replacement."""
 import json, os, re
 import httpx
 
 UA = {"User-Agent": "GRID/0.1 (contact: larrywsage@gmail.com)"}
 KEY = os.environ.get("AIRNOW_API_KEY", "")
-
-
-def red(s):
-    return s.replace(KEY, "***") if KEY else s
-
-
 with httpx.Client(timeout=30, headers=UA, follow_redirects=True) as c:
-    for u in ["https://www.cdc.gov/robots.txt"]:
-        r = c.get(u); print("=== robots", r.status_code, " | ".join(l for l in r.text.splitlines() if l.startswith(("Disallow", "User-agent")))[:600])
-    for u in ["https://tools.cdc.gov/api/v2/resources/media?q=health%20alert%20network&max=5&sort=-dateModified",
-              "https://tools.cdc.gov/api/v2/resources/media?topic=Health%20Alert%20Network&max=5",
-              "https://tools.cdc.gov/api/v2/resources/media?name=HAN&max=5&sort=-datePublished"]:
+    for u in ["https://www.cdc.gov/han/php/modules/han-archive.json", "https://www.cdc.gov/han/php/modules/han-archive.static.json"]:
         r = c.get(u)
-        print("=== syndication", u, r.status_code, r.headers.get("content-type"))
+        print("===", u, r.status_code, r.headers.get("content-type"), len(r.content))
         try:
-            d = r.json(); res = d.get("results") or []
-            print("   total:", (d.get("meta") or {}).get("pagination", {}).get("total"), "| results:", [(x.get("name"), x.get("datePublished"), x.get("sourceUrl")) for x in res[:5]])
-        except Exception as e:  # noqa: BLE001
-            print("   not json", r.text[:200])
-    r = c.get("https://www.cdc.gov/han/php/notices/index.html")
-    t = r.text
-    print("=== HAN notices page", r.status_code, len(t))
-    hrefs = re.findall(r'href="([^"]*han\d{5}[^"]*)"', t)
-    print("   han links:", hrefs[:8], "| count", len(set(hrefs)))
-    for m in list(re.finditer(r"(HAN|Health Advisory|Health Update|Health Alert)[^<]{0,160}", t))[:8]:
-        print("   txt:", re.sub(r"\s+", " ", m.group(0))[:160])
-    if not hrefs:
-        print("   script srcs:", re.findall(r'<script[^>]+src="([^"]+)"', t)[:10])
-        print("   data/json refs:", sorted(set(re.findall(r'["\']([^"\']+\.json[^"\']*)["\']', t)))[:10])
-    r = c.get("https://tools.cdc.gov/api/v2/resources/media/285676.rss")
-    items = re.findall(r"<item>.*?<title>(.*?)</title>.*?<pubDate>(.*?)</pubDate>", r.text, re.S)[:5]
-    print("=== CDC outbreaks RSS", r.status_code, items)
-    if KEY:
-        for path in ["/aq/observation/zipCode/current/", "/aq/forecast/zipCode/"]:
-            r = c.get("https://www.airnowapi.org" + path, params={"format": "application/json", "zipCode": "44224", "distance": "25", "API_KEY": KEY})
-            print("=== AirNow", path, r.status_code, r.headers.get("content-type"), "| body:", red(r.text[:300]), "| key len", len(KEY), "| has space:", KEY != KEY.strip())
-    else:
-        print("=== AirNow: AIRNOW_API_KEY not provided to probe")
+            d = r.json()
+        except Exception:
+            print("  not json:", r.text[:200]); continue
+        def shape(v, depth=0):
+            if isinstance(v, dict): return {k: shape(x, depth+1) for k, x in list(v.items())[:12]} if depth < 3 else "{..}"
+            if isinstance(v, list): return [shape(v[0], depth+1), f"len={len(v)}"] if v else []
+            return type(v).__name__
+        print("  shape:", json.dumps(shape(d))[:1200])
+        rows = d if isinstance(d, list) else next((v for v in d.values() if isinstance(v, list)), [])
+        for row in rows[:4]:
+            print("  row:", json.dumps(row)[:500])
+    r = c.get("https://docs.airnowapi.org/webservices/retired")
+    t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", " ", r.text, flags=re.S)))
+    print("=== AirNow retired page", r.status_code, "|", t[:1800])
+    print("  links:", sorted(set(re.findall(r'href="([^"]+)"', r.text)))[:30])
