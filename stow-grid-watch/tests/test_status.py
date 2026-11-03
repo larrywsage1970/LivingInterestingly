@@ -90,11 +90,17 @@ def test_known_red_beats_gray(loc):
 
 
 def test_optional_feed_failing_does_not_gray(loc):
+    bad = res("fema_declarations", [], ok=False)
+    b = run(loc, overrides={"fema_declarations": (bad, None)})
+    assert b["color"] == "green"
+    fs = next(f for f in b["feeds"] if f["id"] == "fema_declarations")
+    assert fs["state"] == "failing"
+
+
+def test_ipaws_failing_is_gray(loc):
     bad = res("fema_ipaws", [], ok=False)
     b = run(loc, overrides={"fema_ipaws": (bad, None)})
-    assert b["color"] == "green"
-    fs = next(f for f in b["feeds"] if f["id"] == "fema_ipaws")
-    assert fs["state"] == "failing"
+    assert b["color"] == "gray" and "IPAWS" in b["rule"]
 
 
 # ---- other amber/red rules ----
