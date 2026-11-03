@@ -1,0 +1,28 @@
+name: EIA probe (temporary)
+on:
+  push:
+    branches: [claude/eia-pjm]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: stow-grid-watch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - env:
+          SGW_USER_AGENT: "GRID/0.1 (contact: larrywsage@gmail.com)"
+          SGW_MIN_CADENCE_S: "1800"
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          pip install -q -r requirements-dev.txt
+          python -m pytest -q
+          test -n "$EIA_API_KEY" && echo "EIA key present (${#EIA_API_KEY} chars)" || echo "EIA key MISSING"
+          python -m app.snapshot --out /tmp/site
+          python -c "import json;d=json.load(open('/tmp/site/api/status.json'));c=d['cards']['eia_pjm'];print('EIA state:',c['state'],'| error:',c.get('error'));[print(' -',i['title'],'|',i['starts'],'| lag h:',i.get('data_lag_h')) for i in c['items']]"
+          if grep -q "$EIA_API_KEY" /tmp/site/api/status.json; then echo "KEY LEAKED INTO SNAPSHOT"; exit 1; else echo "key not in snapshot: ok"; fi

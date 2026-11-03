@@ -13,6 +13,7 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Weather alerts | NWS `api.weather.gov/alerts/active?point=` | yes | 5 min |
 | Forecast (48h) | NWS `/points` → `/forecast` | yes | 30 min |
 | Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | yes | 10 min |
+| PJM demand + day-ahead forecast | EIA Open Data v2 `electricity/rto/region-data` (needs `EIA_API_KEY` repo secret). Context only, no banner effect. | no | 60 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.

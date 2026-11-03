@@ -33,6 +33,7 @@
       const h = (it.hazard_mentions || []).length ? `<span class="it-tag warn">mentions ${esc(it.hazard_mentions.join(", "))}</span>` : "";
       return `<span class="it-tag">forecast</span>${h}`;
     }
+    if (it.kind === "observation") return `<span class="it-tag">measured</span>`;
     if (it.kind === "declaration") {
       return it.active ? `<span class="it-tag warn">active declaration</span>` : `<span class="it-tag">closed declaration</span>`;
     }
@@ -45,6 +46,10 @@
     const src = card.label;
     const meta = [];
     if (it.kind === "forecast") meta.push(`${when(it.starts)} – ${hhmm(it.ends)}`);
+    else if (it.kind === "observation") {
+      meta.push(`hour of ${when(it.starts)}`);
+      if (it.data_lag_h > 3) meta.push(`EIA data is ${Math.round(it.data_lag_h)}h behind`);
+    }
     else {
       if (it.sender) meta.push(esc(it.sender));
       if (it.severity) meta.push(`severity: ${esc(it.severity)}`);
@@ -55,7 +60,7 @@
       <p class="it-title">${tagFor(it)}${esc(it.title)}</p>
       <p class="it-meta">${meta.join(" · ")}</p>
       <p class="it-meta">Source: ${esc(src)} · fetched ${hhmm(card.last_good_at)}</p>
-      ${it.raw_excerpt && it.kind !== "forecast" ? `<p class="it-excerpt">${esc(it.raw_excerpt)}</p>` : ""}
+      ${it.raw_excerpt && !["forecast", "observation"].includes(it.kind) ? `<p class="it-excerpt">${esc(it.raw_excerpt)}</p>` : ""}
       <a class="src-link" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">Open source ↗</a>
     </li>`;
   }

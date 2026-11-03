@@ -52,6 +52,7 @@ jobs:
           # to override. NWS requires contact info in the User-Agent.
           SGW_USER_AGENT: "${{ vars.SGW_USER_AGENT || 'GRID/0.1 (contact: larrywsage@gmail.com)' }}"
           SGW_MIN_CADENCE_S: "1800"
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
         run: python -m app.snapshot --out site --previous-url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
 
       - id: pages
