@@ -56,3 +56,30 @@ def maybe_notify(prev: dict | None, new: dict, loc_name: str, site_url: str | No
     finally:
         if own:
             client.close()
+
+
+def send_test(site_url: str | None = None, client: httpx.Client | None = None) -> str:
+    """Send one clearly labeled test notification (used by the workflow's 'send test alert' option)."""
+    topic = os.environ.get("NTFY_TOPIC", "").strip()
+    if not topic:
+        return "test not sent: NTFY_TOPIC is not set"
+    server = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
+    headers = {"Title": "GRID test", "Priority": "3", "Tags": "test_tube"}
+    if site_url:
+        headers["Click"] = site_url
+    own = client is None
+    client = client or httpx.Client(timeout=15)
+    try:
+        r = client.post(f"{server}/{topic}", headers=headers,
+                        content="Test alert from GRID. If you see this, phone alerts are working. No action needed.".encode())
+        return f"test sent: HTTP {r.status_code}"
+    except httpx.HTTPError as exc:
+        return f"test failed: {type(exc).__name__}"
+    finally:
+        if own:
+            client.close()
+
+
+if __name__ == "__main__":
+    import sys
+    print(send_test(sys.argv[1] if len(sys.argv) > 1 else None))
