@@ -63,6 +63,8 @@ GRID can push a notification to your phone when the banner turns **Amber or Red*
 4. In GitHub, go to Settings → Secrets and variables → Actions → **Secrets** → New, and add `NTFY_TOPIC` with the topic name.
 Only public board content is sent (banner color, the one-line reason, a link). Each run logs whether it pushed.
 
+**Test it:** Actions → GRID → Run workflow → tick **Send a test alert to your phone** → Run workflow. A "GRID test" notification should arrive within a minute.
+
 ## Ask (phase 7)
 See `../grid-ask/README.md`. The Ask card appears once the repo variable `SGW_ASK_URL` is set.
 

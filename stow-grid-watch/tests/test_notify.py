@@ -69,3 +69,16 @@ def test_snapshot_pushes_on_change_and_injects_ask_url(tmp_path, monkeypatch):
     assert sent and sent[0].headers["Click"] == "https://pages.example/repo/"
     html = (tmp_path / "site" / "index.html").read_text()
     assert '<meta name="sgw-ask-url" content="https://grid-ask.example.workers.dev">' in html
+
+
+def test_send_test_alert(monkeypatch):
+    monkeypatch.setenv("NTFY_TOPIC", "grid-test-topic")
+    sent = []
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200)))
+    assert notify.send_test("https://example.github.io/grid/", client) == "test sent: HTTP 200"
+    assert sent[0].headers["Title"] == "GRID test" and b"Test alert" in sent[0].content
+
+
+def test_send_test_without_topic(monkeypatch):
+    monkeypatch.delenv("NTFY_TOPIC", raising=False)
+    assert notify.send_test() == "test not sent: NTFY_TOPIC is not set"
