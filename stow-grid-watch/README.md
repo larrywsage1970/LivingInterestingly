@@ -14,8 +14,9 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Forecast (48h) | NWS `/points` → `/forecast` | yes | 30 min |
 | Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | yes | 10 min |
 | PJM operations notices | PJM Inside Lines Operations RSS (`insidelines.pjm.com/category/operations/feed/`). Amber only for a post from the last 48h announcing an alert/advisory/emergency action (retrospectives excluded). Not the real-time Emergency Procedures system (that needs a PJM Tools account). | no | 30 min |
-| PJM demand + day-ahead forecast | EIA Open Data v2 `electricity/rto/region-data` (needs `EIA_API_KEY` repo secret). Context only, no banner effect. | no | 60 min |
 | Utility outages | FirstEnergy: **no public outage data feed** (checked 2026-11-03; the outage map is an interactive app with internal data). Link-outs only: outage page, map, town search, text/email alerts. | n/a | n/a |
+| National security / terrorism | DHS NTAS XML feed (`dhs.gov/ntas/1.1/alerts.xml`). Imminent Threat Alert -> Red, Elevated -> Amber, Bulletin -> shown only. | no | 30 min |
+| Earthquakes | USGS FDSN GeoJSON, 300 km / 7 days / M2.5+. PAGER orange/red -> Red, yellow -> Amber; M4.5+ within 150 km in 24 h -> Amber. | no | 30 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.
@@ -76,7 +77,6 @@ Add an object to `locations.json` (lat/lon, FIPS state + county, threshold, link
 - [x] The NWS calls work with the configured User-Agent (verified 2026-11-03).
 - [x] OpenFEMA IPAWS query verified live 2026-11-03 (syntax is `geography'POINT(lon lat)'`, no space). The archive is current to within days. About 40% of recent records have no geometry, which the second query covers.
 - [x] OpenFEMA declarations filter verified live 2026-11-03.
-- [x] EIA PJM demand verified live 2026-11-03 (data runs about 1–2 h behind real time; the key never appears in the published snapshot).
 - [ ] The URLs marked `"verified": false` in `locations.json`.
 - [ ] Replace the synthetic fixtures with recorded responses.
 

@@ -34,7 +34,10 @@
       const h = (it.hazard_mentions || []).length ? `<span class="it-tag warn">mentions ${esc(it.hazard_mentions.join(", "))}</span>` : "";
       return `<span class="it-tag">forecast</span>${h}`;
     }
-    if (it.kind === "observation") return `<span class="it-tag">measured</span>`;
+    if (it.kind === "quake") {
+      const cls = ["orange", "red"].includes(it.pager) ? "crit" : it.pager === "yellow" ? "warn" : "";
+      return `<span class="it-tag ${cls}">earthquake${it.pager ? " · PAGER " + esc(it.pager) : ""}</span>`;
+    }
     if (it.kind === "notice") return it.ops_action && it.recent
       ? `<span class="it-tag warn">PJM operations update</span>` : `<span class="it-tag">PJM notice</span>`;
     if (it.kind === "declaration") {
@@ -42,17 +45,16 @@
     }
     const ev = it.event || "";
     const cls = /Warning$/.test(ev) ? "crit" : /(Watch|Advisory)$/.test(ev) ? "warn" : "";
-    return `<span class="it-tag ${cls}">alert · ${esc(it.origin === "ipaws" ? "IPAWS" : "NWS")}</span>`;
+    const origin = { ipaws: "IPAWS", ntas: "DHS NTAS", nws: "NWS" }[it.origin] || "alert";
+    const ntasCls = it.origin === "ntas" ? (/imminent/i.test(it.ntas_type) ? "crit" : /elevated/i.test(it.ntas_type) ? "warn" : "") : cls;
+    return `<span class="it-tag ${ntasCls}">alert · ${esc(origin)}</span>`;
   }
 
   function itemHtml(it, card) {
     const src = card.label;
     const meta = [];
     if (it.kind === "forecast") meta.push(`${when(it.starts)} – ${hhmm(it.ends)}`);
-    else if (it.kind === "observation") {
-      meta.push(`hour of ${when(it.starts)}`);
-      if (it.data_lag_h > 3) meta.push(`EIA data is ${Math.round(it.data_lag_h)}h behind`);
-    }
+
     else {
       if (it.sender) meta.push(esc(it.sender));
       if (it.severity) meta.push(`severity: ${esc(it.severity)}`);
@@ -105,13 +107,14 @@
     });
     $$("[data-items]").forEach((ul) => {
       const ids = ul.dataset.items.split(" ");
+      const recentOnly = ul.dataset.recentOnly === "1";
       const html = ids.flatMap((id) => {
         const c = data.cards[id];
-        return c ? c.items.map((it) => itemHtml(it, c)) : [];
+        return c ? c.items.filter((it) => !recentOnly || it.recent).map((it) => itemHtml(it, c)) : [];
       });
       const anyUsable = ids.some((id) => data.cards[id]?.last_good_at);
       ul.innerHTML = html.length ? html.join("")
-        : `<li class="empty">${anyUsable ? "None reported by the source." : "No data yet. See the source links below."}</li>`;
+        : `<li class="empty">${anyUsable ? esc(ul.dataset.empty || "None reported by the source.") : "No data yet. See the source links below."}</li>`;
     });
     renderLinks(loc.links || []);
   }

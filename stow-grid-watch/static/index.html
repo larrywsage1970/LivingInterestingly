@@ -43,10 +43,10 @@
   <p id="offline" class="offline" hidden>Offline: showing the last copy saved on this device.</p>
 
   <section class="card" id="card-alerts">
-    <h2>Local alerts</h2>
-    <p class="hint">Weather alerts (NWS) and alerts from county, state and federal authorities (IPAWS). These are events that have been issued.</p>
-    <div class="feeds" data-feeds="nws_alerts fema_ipaws"></div>
-    <ul class="items" data-items="nws_alerts fema_ipaws"></ul>
+    <h2>Emergency alerts</h2>
+    <p class="hint">Issued alerts only: weather (NWS); county, state and national emergency alerts sent through IPAWS (including Presidential alerts); and DHS national terrorism advisories.</p>
+    <div class="feeds" data-feeds="nws_alerts fema_ipaws dhs_ntas"></div>
+    <ul class="items" data-items="nws_alerts fema_ipaws dhs_ntas" data-empty="No active alerts from NWS, IPAWS or DHS."></ul>
   </section>
 
   <section class="card" id="card-forecast">
@@ -57,31 +57,23 @@
   </section>
 
   <section class="card" id="card-fema">
-    <h2>Emergency declarations</h2>
-    <p class="hint">Active FEMA declarations for this county, plus any that closed in the last 2 days.</p>
-    <div class="feeds" data-feeds="fema_declarations"></div>
-    <ul class="items" data-items="fema_declarations"></ul>
+    <h2>Disasters</h2>
+    <p class="hint">Earthquakes within 300 km in the last 7 days (USGS), and FEMA disaster declarations for this county (active, or closed in the last 2 days).</p>
+    <div class="feeds" data-feeds="usgs_quakes fema_declarations"></div>
+    <ul class="items" data-items="usgs_quakes fema_declarations" data-empty="No nearby earthquakes and no active disaster declarations."></ul>
   </section>
 
-  <section class="card" id="card-grid">
-    <h2>Grid · PJM</h2>
-    <p class="hint">PJM's operations announcements (Inside Lines) and measured demand from EIA. Announcements are PJM news posts, not the real-time Emergency Procedures system; open that link for live postings.</p>
-    <div class="feeds" data-feeds="pjm_insidelines eia_pjm"></div>
-    <ul class="items" data-items="pjm_insidelines eia_pjm"></ul>
+
+  <section class="card pending">
+    <h2>Power</h2>
+    <p class="hint"><strong>Outages at your address:</strong> FirstEnergy publishes no public outage feed. Text <strong>REG</strong> to <strong>544487</strong> to enroll, then <strong>OUT</strong> to report or <strong>STAT</strong> for status, or use the map below.</p>
+    <ul class="links" data-links="FirstEnergy"></ul>
+    <p class="hint" style="margin-top:12px"><strong>Regional grid emergencies (PJM):</strong> alerts PJM has announced in the last 2 days, such as Maximum Generation or Load Management actions.</p>
+    <div class="feeds" data-feeds="pjm_insidelines"></div>
+    <ul class="items" data-items="pjm_insidelines" data-recent-only="1" data-empty="No PJM emergency actions announced in the last 2 days."></ul>
     <ul class="links" data-links="PJM"></ul>
   </section>
 
-  <section class="card pending">
-    <h2>Utility outages · FirstEnergy</h2>
-    <p class="hint">FirstEnergy does not publish a public outage data feed, so GRID cannot show outages here. Use their map, or sign up for FirstEnergy's own alerts for your address: text <strong>REG</strong> to <strong>544487</strong>, then text <strong>OUT</strong> to report an outage or <strong>STAT</strong> for status.</p>
-    <ul class="links" data-links="FirstEnergy"></ul>
-  </section>
-
-  <section class="card pending">
-    <h2>Reliability reports</h2>
-    <p class="hint">Not connected yet. Check the source.</p>
-    <ul class="links" data-links="NERC"></ul>
-  </section>
 
   <section class="card">
     <h2>Other primary sources</h2>
@@ -94,8 +86,8 @@
     <div class="chips" id="ask-chips">
       <button type="button" class="chip">Any active alerts for Stow right now?</button>
       <button type="button" class="chip">Is a winter storm or ice forecast in the next 48 hours?</button>
-      <button type="button" class="chip">How close is PJM demand to its recent peak?</button>
-      <button type="button" class="chip">What does a PJM Cold Weather Alert mean for me?</button>
+      <button type="button" class="chip">Is there any national security or terrorism advisory in effect?</button>
+      <button type="button" class="chip">What should I do now to prepare for a multi-day power outage?</button>
     </div>
     <form id="ask-form" autocomplete="off">
       <label class="sr" for="ask-q">Question</label>

@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 
-from app.adapters import eia, fema, nws, pjm
+from app.adapters import dhs, fema, nws, pjm, usgs
 from app.adapters.base import SourceSpec
 
 SOURCES: tuple[SourceSpec, ...] = (
@@ -19,9 +19,12 @@ SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec("fema_declarations", "FEMA disaster declarations", cadence_s=3600, required=False,
                fetch=fema.fetch_declarations,
                home_url=lambda loc: "https://www.fema.gov/disaster/declarations"),
-    # Context only (no banner effect). EIA posts hourly data with a lag of an hour or more.
-    SourceSpec("eia_pjm", "EIA · PJM demand", cadence_s=3600, required=False,
-               fetch=eia.fetch, home_url=lambda loc: eia.PUBLIC_URL),
+    # National security / terrorism advisories. Optional: national scope, changes rarely.
+    SourceSpec("dhs_ntas", "DHS terrorism advisories (NTAS)", cadence_s=1800, required=False,
+               fetch=dhs.fetch, home_url=lambda loc: dhs.HOME),
+    # Earthquakes near the location. Optional.
+    SourceSpec("usgs_quakes", "USGS earthquakes (300 km, 7 days)", cadence_s=1800, required=False,
+               fetch=usgs.fetch, home_url=lambda loc: usgs.HOME),
     # PJM's own operations news (RSS). Optional: a news outage should not gray the banner.
     SourceSpec("pjm_insidelines", "PJM Inside Lines · Operations", cadence_s=1800, required=False,
                fetch=pjm.fetch, home_url=lambda loc: pjm.HOME),

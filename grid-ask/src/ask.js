@@ -18,6 +18,8 @@ export const ALLOWED_HOSTS = new Set([
   "api.weather.gov", "www.weather.gov", "forecast.weather.gov",
   // Emergency management
   "www.fema.gov", "www.ready.gov", "ema.ohio.gov",
+  // National security and natural hazards
+  "www.dhs.gov", "www.cisa.gov", "earthquake.usgs.gov",
   // Grid operator and reliability
   "www.pjm.com", "insidelines.pjm.com", "emergencyprocedures.pjm.com",
   "www.nerc.com", "www.eia.gov", "www.energy.gov",
@@ -48,7 +50,7 @@ export const TOOLS = [
   {
     name: "get_current_status",
     description:
-      "Returns GRID's latest published status for Stow, OH: banner color and rule, each feed's state and last good time, and the items each feed reported (alerts, forecast periods, FEMA declarations, PJM notices, PJM demand). Use this first for questions about current conditions.",
+      "Returns GRID's latest published status for Stow, OH: banner color and rule, each feed's state and last good time, and the items each feed reported (NWS/IPAWS/DHS alerts, forecast periods, USGS earthquakes, FEMA declarations, PJM emergency notices). Use this first for questions about current conditions.",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
     strict: true,
   },

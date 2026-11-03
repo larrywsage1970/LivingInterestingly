@@ -62,6 +62,8 @@ def parse(xml_text: str, now: datetime, limit: int = 8) -> list[dict]:
             ops_action=names_action,
             recent=(now - posted) <= RECENT,
         ))
+    # GRID is for emergencies: publish only PJM posts announcing an alert/emergency action.
+    items = [i for i in items if i["ops_action"]]
     items.sort(key=lambda i: i["starts"], reverse=True)
     return items[:limit]
 
