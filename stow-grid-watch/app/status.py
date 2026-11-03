@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.adapters.base import SourceSpec
 from app.config import Location
@@ -28,9 +29,13 @@ def _dt(s: str | None) -> datetime | None:
     return datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
 
 
-def _hhmm(s: str | None) -> str:
+def _stamp(s: str | None, tz: str) -> str:
+    """Date and time in the location's zone, e.g. 'Nov 3, 11:09 AM EST'. The server runs in UTC."""
     d = _dt(s)
-    return d.astimezone().strftime("%H:%M") if d else "--:--"
+    if not d:
+        return "--"
+    local = d.astimezone(ZoneInfo(tz))
+    return f"{local.strftime('%b')} {local.day}, {local.strftime('%I:%M %p').lstrip('0')} {local.strftime('%Z')}"
 
 
 @dataclass
@@ -76,7 +81,7 @@ def compute(feeds: list[Feed], loc: Location, now: datetime) -> dict:
         data = st["_data"]
         if not data:
             continue
-        src, at = st["label"], _hhmm(data["fetched_at"])
+        src, at = st["label"], _stamp(data["fetched_at"], loc.tz)
         for it in data["items"]:
             if it["kind"] == "alert" and _active(it, now):
                 ev = it.get("event") or it["title"]
@@ -107,7 +112,7 @@ def compute(feeds: list[Feed], loc: Location, now: datetime) -> dict:
     elif bad:
         color = "gray"
         b = bad[0]
-        when = f"last good {_hhmm(b['last_good_at'])}" if b["last_good_at"] else "no good data yet"
+        when = f"last good {_stamp(b['last_good_at'], loc.tz)}" if b["last_good_at"] else "no good data yet"
         rule = f"Unknown: {b['label']} is {b['state']} ({when})"
     elif amber:
         color, rule = "amber", amber[0]

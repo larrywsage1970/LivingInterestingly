@@ -129,3 +129,13 @@ def test_expired_alert_is_ignored(loc):
     a = nws.parse_alerts(fixture("nws_alerts_warning.json"))
     a[0]["ends"] = (NOW - timedelta(minutes=1)).isoformat()
     assert run(loc, alerts=a)["color"] == "green"
+
+
+def test_banner_times_carry_date_and_local_zone(loc):
+    # NOW is 2030-01-10 12:00 EST; the server may run in UTC, the text must not.
+    b = run(loc, alerts=nws.parse_alerts(fixture("nws_alerts_advisory.json")))
+    assert "checked Jan 10, 12:00 PM EST" in b["rule"]
+    good = res("nws_alerts", [], age_s=120)
+    bad = res("nws_alerts", [], ok=False)
+    g = run(loc, overrides={"nws_alerts": (bad, good)})
+    assert "last good Jan 10, 11:58 AM EST" in g["rule"]
