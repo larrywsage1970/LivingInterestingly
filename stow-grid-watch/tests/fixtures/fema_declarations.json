@@ -1,0 +1,29 @@
+{
+ "metadata": {},
+ "DisasterDeclarationsSummaries": [
+  {
+   "disasterNumber": 9901,
+   "declarationType": "EM",
+   "declarationTitle": "SYNTHETIC SEVERE WINTER STORM",
+   "incidentType": "Snowstorm",
+   "declarationDate": "2030-01-09T00:00:00.000Z",
+   "incidentBeginDate": "2030-01-08T00:00:00.000Z",
+   "incidentEndDate": null,
+   "fipsStateCode": "39",
+   "fipsCountyCode": "153",
+   "designatedArea": "Summit (County)"
+  },
+  {
+   "disasterNumber": 9800,
+   "declarationType": "DR",
+   "declarationTitle": "SYNTHETIC FLOODING",
+   "incidentType": "Flood",
+   "declarationDate": "2025-06-01T00:00:00.000Z",
+   "incidentBeginDate": "2025-05-20T00:00:00.000Z",
+   "incidentEndDate": "2025-05-25T00:00:00.000Z",
+   "fipsStateCode": "39",
+   "fipsCountyCode": "153",
+   "designatedArea": "Summit (County)"
+  }
+ ]
+}

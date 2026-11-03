@@ -1,0 +1,29 @@
+{
+  "default": "stow-44224",
+  "locations": [
+    {
+      "id": "stow-44224",
+      "name": "Stow, OH 44224",
+      "county": "Summit County",
+      "state": "OH",
+      "fips_state": "39",
+      "fips_county": "153",
+      "lat": 41.1595,
+      "lon": -81.4404,
+      "utility": "FirstEnergy (Ohio Edison)",
+      "grid_operator": "PJM",
+      "forecast_low_amber_f": 10,
+      "links": [
+        {"label": "NWS Cleveland office", "url": "https://www.weather.gov/cle/", "verified": true},
+        {"label": "FEMA disaster declarations (Ohio)", "url": "https://www.fema.gov/locations/ohio", "verified": false},
+        {"label": "Ohio Emergency Management Agency", "url": "https://ema.ohio.gov/", "verified": false},
+        {"label": "Summit County Emergency Management", "url": "https://co.summitoh.net/", "verified": false},
+        {"label": "PJM emergency procedures", "url": "https://www.pjm.com/markets-and-operations/etools/emerg-procedure.aspx", "verified": true},
+        {"label": "PJM Inside Lines", "url": "https://insidelines.pjm.com/", "verified": true},
+        {"label": "FirstEnergy outages", "url": "https://www.firstenergycorp.com/outages_help.html", "verified": false},
+        {"label": "NERC reliability assessments", "url": "https://www.nerc.com/pa/RAPA/ra/Pages/default.aspx", "verified": true},
+        {"label": "Ready.gov power outages", "url": "https://www.ready.gov/power-outages", "verified": true}
+      ]
+    }
+  ]
+}

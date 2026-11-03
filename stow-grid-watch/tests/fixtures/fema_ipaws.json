@@ -1,0 +1,135 @@
+{
+ "metadata": {},
+ "IpawsArchivedAlerts": [
+  {
+   "identifier": "T1",
+   "sender": "test@summit.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Boil Water Notice",
+     "severity": "Moderate",
+     "urgency": "Immediate",
+     "certainty": "Observed",
+     "senderName": "SYNTHETIC County EMA",
+     "headline": "SYNTHETIC Boil Water Notice",
+     "description": "SYNTHETIC TEST TEXT.",
+     "effective": "2030-01-10T10:00:00-05:00",
+     "expires": "2030-01-12T10:00:00-05:00",
+     "area": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "T2",
+   "sender": "test@summit.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Shelter In Place Warning",
+     "severity": "Severe",
+     "urgency": "Immediate",
+     "certainty": "Observed",
+     "senderName": "SYNTHETIC County EMA",
+     "headline": "SYNTHETIC Shelter In Place Warning",
+     "description": "SYNTHETIC TEST TEXT.",
+     "effective": "2030-01-10T10:00:00-05:00",
+     "expires": "2030-01-10T14:00:00-05:00",
+     "area": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "T3",
+   "sender": "w-nws.webmaster@noaa.gov",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Winter Storm Warning",
+     "severity": "Moderate",
+     "urgency": "Immediate",
+     "certainty": "Observed",
+     "senderName": "SYNTHETIC County EMA",
+     "headline": "SYNTHETIC Winter Storm Warning",
+     "description": "SYNTHETIC TEST TEXT.",
+     "effective": "2030-01-10T10:00:00-05:00",
+     "expires": "2030-01-12T10:00:00-05:00",
+     "area": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "T4",
+   "sender": "test@summit.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Test",
+   "msgType": "Alert",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Required Monthly Test",
+     "severity": "Unknown",
+     "urgency": "Immediate",
+     "certainty": "Observed",
+     "senderName": "SYNTHETIC County EMA",
+     "headline": "SYNTHETIC Required Monthly Test",
+     "description": "SYNTHETIC TEST TEXT.",
+     "effective": "2030-01-10T10:00:00-05:00",
+     "expires": "2030-01-12T10:00:00-05:00",
+     "area": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "T5",
+   "sender": "test@summit.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Civil Emergency Message",
+     "severity": "Severe",
+     "urgency": "Immediate",
+     "certainty": "Observed",
+     "senderName": "SYNTHETIC County EMA",
+     "headline": "SYNTHETIC Civil Emergency Message",
+     "description": "SYNTHETIC TEST TEXT.",
+     "effective": "2030-01-10T10:00:00-05:00",
+     "expires": "2030-01-09T10:00:00-05:00",
+     "area": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
