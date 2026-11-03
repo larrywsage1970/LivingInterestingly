@@ -3,14 +3,17 @@
 Precedence (first match wins):
   1. RED    usable data shows: an NWS *Warning*; an IPAWS alert whose event is a
             Warning/Evacuation/Shelter order or whose CAP severity is Extreme; a DHS NTAS
-            Imminent Threat Alert; or a nearby earthquake USGS rates PAGER orange/red.
+            Imminent Threat Alert; a nearby earthquake USGS rates PAGER orange/red; an observed
+            G5 geomagnetic storm; a nearby nuclear plant General or Site Area Emergency; or
+            Hazardous air quality.
   2. GRAY   any REQUIRED feed is failing, stale (> 2x cadence), or never fetched.
             Known Red is still shown; an unknown is never shown as Green or Amber.
   3. AMBER  NWS Watch or Advisory; any other active IPAWS alert; an active FEMA
             declaration for the county; a forecast low <= the location threshold; or a
             PJM post from the last 48h announcing an alert/advisory/emergency action; a DHS
             NTAS Elevated Threat Alert; or a nearby quake rated PAGER yellow, or M4.5+ within
-            150 km in the last 24h.
+            150 km in the last 24h; an observed G4 storm or forecast G4+; an SPC Day 1 Moderate/High
+            severe-weather risk; a nearby nuclear plant Alert; or Unhealthy/Very Unhealthy air.
   4. GREEN  none of the above and all required feeds fresh.
 
 "Usable" data = the last good fetch of a feed, if it is no older than 2x cadence.
@@ -105,6 +108,28 @@ def compute(feeds: list[Feed], loc: Location, now: datetime) -> dict:
                         red.append(f"{ev} from {it.get('sender') or 'issuing authority'} ({src}, checked {at})")
                     else:
                         amber.append(f"{ev} from {it.get('sender') or 'issuing authority'} ({src}, checked {at})")
+            elif it["kind"] == "spaceweather":
+                g = it.get("g_scale") or 0
+                if g >= 5:
+                    red.append(f"{it['title']} (NOAA SWPC, checked {at})")
+                elif g == 4:
+                    amber.append(f"{it['title']} (NOAA SWPC, checked {at})")
+            elif it["kind"] == "nuclear":
+                cls = (it.get("emergency_class") or "").lower()
+                if "general emergency" in cls or "site area emergency" in cls:
+                    red.append(f"{it['title']} ({src}, checked {at})")
+                elif cls == "alert" or cls.startswith("alert"):
+                    amber.append(f"{it['title']} ({src}, checked {at})")
+            elif it["kind"] == "airquality":
+                c = it.get("aqi_category") or 0
+                if c >= 6:
+                    red.append(f"{it['title']} ({src}, checked {at})")
+                elif c >= 4:
+                    amber.append(f"{it['title']} ({src}, checked {at})")
+            elif it["kind"] == "forecast" and (it.get("g_scale") or 0) >= 4:
+                amber.append(f"Forecast, not an event: {it['title']} ({src}, checked {at})")
+            elif it["kind"] == "forecast" and it.get("spc_day") == 1 and (it.get("spc_rank") or 0) >= 6:
+                amber.append(f"Forecast, not an event: {it['title']} ({src}, checked {at})")
             elif it["kind"] == "quake":
                 if it.get("pager") in ("orange", "red"):
                     red.append(f"{it['title']} (USGS PAGER {it['pager']}, checked {at})")

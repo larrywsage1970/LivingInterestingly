@@ -1,0 +1,1 @@
+[{"DateObserved": "2030-01-10 ", "HourObserved": 11, "LocalTimeZone": "EST", "ReportingArea": "Akron", "ParameterName": "PM2.5", "AQI": 210, "Category": {"Number": 5, "Name": "Very Unhealthy"}}, {"DateObserved": "2030-01-10 ", "HourObserved": 11, "LocalTimeZone": "EST", "ReportingArea": "Akron", "ParameterName": "O3", "AQI": 30, "Category": {"Number": 1, "Name": "Good"}}]

@@ -27,6 +27,12 @@
         {"label": "FirstEnergy outage text & email alerts", "url": "https://www.firstenergycorp.com/outages_help/outage_help/outage_notifications.html", "verified": true},
         {"label": "DHS National Terrorism Advisory System", "url": "https://www.dhs.gov/national-terrorism-advisory-system", "verified": true},
         {"label": "USGS earthquake map", "url": "https://earthquake.usgs.gov/earthquakes/map/", "verified": true},
+        {"label": "NOAA Space Weather Prediction Center", "url": "https://www.swpc.noaa.gov/", "verified": true},
+        {"label": "NOAA Storm Prediction Center outlooks", "url": "https://www.spc.noaa.gov/products/outlook/", "verified": true},
+        {"label": "CISA cybersecurity advisories", "url": "https://www.cisa.gov/news-events/cybersecurity-advisories", "verified": true},
+        {"label": "NRC event notification reports", "url": "https://www.nrc.gov/reading-rm/doc-collections/event-status/event/", "verified": true},
+        {"label": "CDC Health Alert Network (no data feed)", "url": "https://www.cdc.gov/han/php/notices/index.html", "verified": true},
+        {"label": "EPA AirNow air quality", "url": "https://www.airnow.gov/", "verified": true},
         {"label": "Ready.gov power outages", "url": "https://www.ready.gov/power-outages", "verified": true}
       ]
     }
