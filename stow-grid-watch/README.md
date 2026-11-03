@@ -73,6 +73,9 @@ Only public board content is sent (banner color, the one-line reason, a link). E
 
 **Test it:** Actions → GRID → Run workflow → tick **Send a test alert to your phone** → Run workflow. A "GRID test" notification should arrive within a minute.
 
+## Reliable updates and the Refresh button
+GitHub's scheduler isn't guaranteed. `../grid-refresh/` is a small Cloudflare Worker that starts the update every 15 minutes, and on demand when you tap Refresh in the app. Setup is in its README (a GitHub token, one Cloudflare secret, a Git deploy, and the `SGW_REFRESH_URL` repo variable).
+
 ## Ask (phase 7)
 See `../grid-ask/README.md`. The Ask card appears once the repo variable `SGW_ASK_URL` is set.
 

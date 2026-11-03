@@ -197,12 +197,46 @@
       ptr.textContent = pulled > 80 ? "Release to refresh" : "Pull to refresh";
     }, { passive: true });
     window.addEventListener("touchend", () => {
-      if (startY !== null && pulled > 80) load(true);
+      if (startY !== null && pulled > 80) refreshNow();
       startY = null; pulled = 0; ptr.style.height = "0px";
     });
   })();
 
-  $("#refresh").addEventListener("click", () => load(true));
+  // Refresh: if the grid-refresh Worker is configured, ask it to check every source now,
+  // then watch for the new snapshot (about 1-2 minutes). Otherwise just reload the latest.
+  const refreshUrl = document.querySelector('meta[name="sgw-refresh-url"]')?.content || "";
+  let checking = false;
+  async function refreshNow() {
+    if (!STATIC || !/^https:\/\//.test(refreshUrl)) return load(true);
+    if (checking) return;
+    checking = true;
+    const label = $("#refresh-label"), btn = $("#refresh");
+    const before = (() => { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.banner?.computed_at; } catch (_) { return null; } })();
+    btn.classList.add("spin"); label.textContent = "Checking sources…";
+    try {
+      const r = await fetch(refreshUrl.replace(/\/$/, "") + "/refresh", { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      label.textContent = d.action === "started" ? "Checking sources… (1–2 min)" : "Update already running…";
+      const deadline = Date.now() + 4 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((res) => setTimeout(res, 15000));
+        await load();
+        let now = null;
+        try { now = JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.banner?.computed_at; } catch (_) {}
+        if (now && now !== before) { label.textContent = "Updated"; break; }
+      }
+      if (label.textContent !== "Updated") label.textContent = "Still waiting: try again shortly";
+    } catch (_) {
+      await load(true);
+      label.textContent = "Reloaded (could not start a new check)";
+    } finally {
+      btn.classList.remove("spin");
+      checking = false;
+      setTimeout(() => { label.textContent = "Refresh"; }, 4000);
+    }
+  }
+  $("#refresh").addEventListener("click", refreshNow);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
   setInterval(() => { if (!document.hidden) load(); }, 120000);
   load();

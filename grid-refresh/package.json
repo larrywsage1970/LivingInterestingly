@@ -1,0 +1,7 @@
+{
+  "name": "grid-refresh",
+  "private": true,
+  "type": "module",
+  "description": "Runs the GRID update on a reliable schedule and on demand from the app's Refresh button.",
+  "scripts": { "test": "node --test test/*.test.js" }
+}

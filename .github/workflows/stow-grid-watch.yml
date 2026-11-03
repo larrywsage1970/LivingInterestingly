@@ -19,6 +19,7 @@ on:
     paths:
       - "stow-grid-watch/**"
       - "grid-ask/**"
+      - "grid-refresh/**"
       - ".github/workflows/stow-grid-watch.yml"
 
 permissions:
@@ -60,6 +61,10 @@ jobs:
         working-directory: grid-ask
         run: npm ci --no-audit --no-fund && npm test
 
+      - name: Test refresh worker
+        working-directory: grid-refresh
+        run: npm test
+
       - name: Set app version
         run: echo "SGW_VERSION=$(git log -1 --format=%cd --date=format:%Y.%m.%d)-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
 
@@ -73,6 +78,8 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           # Ask (phase 7): the deployed grid-ask Worker URL. Unset = Ask card hidden.
           SGW_ASK_URL: ${{ vars.SGW_ASK_URL }}
+          # Refresh worker URL (grid-refresh). Unset = Refresh just reloads the latest snapshot.
+          SGW_REFRESH_URL: ${{ vars.SGW_REFRESH_URL }}
         run: python -m app.snapshot --out site --previous-url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
 
       - name: Send test alert
