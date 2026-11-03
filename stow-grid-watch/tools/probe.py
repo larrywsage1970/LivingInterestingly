@@ -16,4 +16,10 @@ async def main():
             for i in r["items"][:6]:
                 print("  -", i["title"][:160], "|", i.get("starts"))
 
+    async with httpx.AsyncClient(timeout=40, follow_redirects=True) as c:
+        import re
+        t = (await c.get(gov_extra.CDC_OUTBREAKS)).text
+        for m in re.findall(r"<item>(.*?)</item>", t, re.S)[:2]:
+            print("CDC raw item:", re.sub(r"\s+", " ", m)[:500])
+
 asyncio.run(main())

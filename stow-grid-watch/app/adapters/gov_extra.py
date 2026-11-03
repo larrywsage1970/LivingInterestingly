@@ -216,7 +216,11 @@ def parse_cdc(xml_text: str, now: datetime, days: int = 60) -> list[dict]:
             posted = parsedate_to_datetime(it.findtext("pubDate") or "").astimezone(timezone.utc)
         except (TypeError, ValueError):
             continue
-        if not title or not link.startswith("https://www.cdc.gov/") or now - posted > timedelta(days=days):
+        host = re.match(r"https?://([^/]+)/", link + "/")
+        if not title or not host or not (host.group(1) == "cdc.gov" or host.group(1).endswith(".cdc.gov")):
+            continue
+        link = "https://" + link.split("://", 1)[1]                   # always https
+        if now - posted > timedelta(days=days):
             continue
         items.append(item("health", title=title, url=link, starts=posted.isoformat(), issued=posted.isoformat(),
                           raw_excerpt=_strip(it.findtext("description"))[:3000], sender="CDC", origin="cdc"))
