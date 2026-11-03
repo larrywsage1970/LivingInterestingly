@@ -52,8 +52,8 @@ jobs:
       - name: Poll sources and build site
         env:
           # Set a repo variable SGW_USER_AGENT (Settings > Secrets and variables > Actions > Variables)
-          # with your contact email. NWS requires contact info; the repo URL is the fallback.
-          SGW_USER_AGENT: ${{ vars.SGW_USER_AGENT || format('StowGridWatch/0.1 (+https://github.com/{0})', github.repository) }}
+          # to override. NWS requires contact info in the User-Agent.
+          SGW_USER_AGENT: ${{ vars.SGW_USER_AGENT || 'StowGridWatch/0.1 (contact: larrywsage@gmail.com)' }}
           SGW_MIN_CADENCE_S: "1800"
         run: python -m app.snapshot --out site --previous-url "${{ steps.pages.outputs.base_url }}"
 
