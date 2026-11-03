@@ -12,13 +12,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 
-from app import poller
+from app import notify, poller
 from app.adapters.base import TIMEOUT
 from app.config import BASE_DIR, get_settings, load_locations
 from app.payload import build_payload
@@ -51,7 +52,8 @@ async def fetch_previous(client: httpx.AsyncClient, base_url: str | None, loc_id
         return None
 
 
-async def build(out: Path, previous_url: str | None, client: httpx.AsyncClient | None = None) -> dict:
+async def build(out: Path, previous_url: str | None, client: httpx.AsyncClient | None = None,
+                notify_client=None) -> dict:
     settings = get_settings()
     default_loc, locations = load_locations(settings.locations_file)
     own = client is None
@@ -64,13 +66,17 @@ async def build(out: Path, previous_url: str | None, client: httpx.AsyncClient |
         (out / "api").mkdir(exist_ok=True)
 
         html = (out / "index.html").read_text()
-        (out / "index.html").write_text(html.replace(
-            '<meta name="sgw-mode" content="server">', '<meta name="sgw-mode" content="static">'))
+        html = html.replace('<meta name="sgw-mode" content="server">', '<meta name="sgw-mode" content="static">')
+        ask_url = os.environ.get("SGW_ASK_URL", "").strip()
+        if ask_url.startswith("https://"):
+            html = html.replace('<meta name="sgw-ask-url" content="">', f'<meta name="sgw-ask-url" content="{ask_url}">')
+        (out / "index.html").write_text(html)
 
         summary = {}
         for loc in locations.values():
             store = Store(":memory:")
-            seed_from_previous(store, loc.id, await fetch_previous(client, previous_url, loc.id))
+            previous = await fetch_previous(client, previous_url, loc.id)
+            seed_from_previous(store, loc.id, previous)
             await poller.poll_all(SOURCES, client, loc, store)
             payload = build_payload(store, loc, datetime.now(timezone.utc))
             payload["mode"] = "static"
@@ -78,8 +84,12 @@ async def build(out: Path, previous_url: str | None, client: httpx.AsyncClient |
             (out / status_file(loc.id)).write_text(text)
             if loc.id == default_loc:
                 (out / "api" / "status.json").write_text(text)
+            site = None
+            if previous_url:
+                site = previous_url.rstrip("/") + "/" + ("" if loc.id == default_loc else f"?location={loc.id}")
+            pushed = notify.maybe_notify(previous, payload, loc.name, site, notify_client)
             summary[loc.id] = {"color": payload["banner"]["color"], "rule": payload["banner"]["rule"],
-                               "feeds": {k: v["state"] for k, v in payload["cards"].items()}}
+                               "feeds": {k: v["state"] for k, v in payload["cards"].items()}, "push": pushed}
         (out / ".nojekyll").write_text("")
         return summary
     finally:

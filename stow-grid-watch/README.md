@@ -55,6 +55,17 @@ How it behaves on Pages:
 - **PJM Emergency Procedures XML** (real-time PJM alerts): needs a PJM Tools account and browserless sign-in token; personal registration was refused (2026-11-03). GRID uses PJM Inside Lines RSS instead and links to the live Emergency Procedures page. If a member account becomes available, this is the upgrade path to a PJM-driven Red.
 - **FirstEnergy outage map data**: not offered for reuse; not scraped. Owners should enroll in FirstEnergy text/email outage alerts for their own address.
 
+## Phone alerts (phase 9)
+GRID can push a notification to your phone when the banner turns **Amber or Red**, and when it clears back to **Green**. Gray (unknown) changes are not pushed, so a flaky feed won't page you. It uses [ntfy](https://ntfy.sh), a free app with no account required:
+1. Install **ntfy** from the App Store and allow notifications.
+2. Make up a long, private topic name, such as `grid-stow-` followed by 16 random letters. Anyone who knows the name can read the alerts, so treat it like a password.
+3. In the ntfy app, tap **+** and subscribe to that topic.
+4. In GitHub, go to Settings → Secrets and variables → Actions → **Secrets** → New, and add `NTFY_TOPIC` with the topic name.
+Only public board content is sent (banner color, the one-line reason, a link). Each run logs whether it pushed.
+
+## Ask (phase 7)
+See `../grid-ask/README.md`. The Ask card appears once the repo variable `SGW_ASK_URL` is set.
+
 ## Add a location
 Add an object to `locations.json` (lat/lon, FIPS state + county, threshold, links). Open it with `/?location=<id>`.
 
