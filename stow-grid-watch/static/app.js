@@ -140,5 +140,42 @@
   setInterval(() => { if (!document.hidden) load(); }, 120000);
   load();
 
+  // ---- Ask (shown only when an Ask URL is configured) ----
+  const askUrl = document.querySelector('meta[name="sgw-ask-url"]')?.content || "";
+  if (/^https:\/\//.test(askUrl)) {
+    const PASS_KEY = "sgw:ask-pass";
+    $("#card-ask").hidden = false;
+    try { $("#ask-pass").value = localStorage.getItem(PASS_KEY) || ""; } catch (_) {}
+    $$("#ask-chips .chip").forEach((c) => c.addEventListener("click", () => {
+      $("#ask-q").value = c.textContent; $("#ask-q").focus();
+    }));
+    $("#ask-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = $("#ask-q").value.trim(), pass = $("#ask-pass").value;
+      const out = $("#ask-out"), go = $("#ask-go");
+      if (!q) return;
+      go.disabled = true; go.textContent = "…";
+      out.innerHTML = `<p class="hint">Checking the primary sources…</p>`;
+      try {
+        const r = await fetch(askUrl.replace(/\/$/, "") + "/ask", {
+          method: "POST", headers: { "Content-Type": "application/json", "X-GRID-Passcode": pass },
+          body: JSON.stringify({ question: q }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || `Ask returned HTTP ${r.status}`);
+        try { localStorage.setItem(PASS_KEY, pass); } catch (_) {}
+        const src = (data.sources || []).map((s) =>
+          `<li><a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">${esc(s.name)}</a> · fetched ${esc(hhmm(s.fetched_at))}</li>`).join("");
+        out.innerHTML = `<p class="ask-answer">${esc(data.answer)}</p>` +
+          (src ? `<p class="it-meta">Sources used:</p><ul class="ask-src">${src}</ul>`
+               : `<p class="it-meta">No live source was used for this answer.</p>`);
+      } catch (err) {
+        out.innerHTML = `<p class="ask-err">${esc(err.message || "Could not reach Ask.")}</p>`;
+      } finally {
+        go.disabled = false; go.textContent = "Ask";
+      }
+    });
+  }
+
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

@@ -13,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "stow-grid-watch/**"
+      - "grid-ask/**"
       - ".github/workflows/stow-grid-watch.yml"
 
 permissions:
@@ -46,6 +47,14 @@ jobs:
       - name: Test
         run: python -m pytest -q
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test Ask worker
+        working-directory: grid-ask
+        run: npm ci --no-audit --no-fund && npm test
+
       - name: Poll sources and build site
         env:
           # Set a repo variable SGW_USER_AGENT (Settings > Secrets and variables > Actions > Variables)
@@ -53,6 +62,10 @@ jobs:
           SGW_USER_AGENT: "${{ vars.SGW_USER_AGENT || 'GRID/0.1 (contact: larrywsage@gmail.com)' }}"
           SGW_MIN_CADENCE_S: "1800"
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          # Phone alerts (phase 9): private ntfy topic name. Unset = no pushes.
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Ask (phase 7): the deployed grid-ask Worker URL. Unset = Ask card hidden.
+          SGW_ASK_URL: ${{ vars.SGW_ASK_URL }}
         run: python -m app.snapshot --out site --previous-url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
 
       - id: pages

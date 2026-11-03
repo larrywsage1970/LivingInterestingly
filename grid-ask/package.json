@@ -1,0 +1,12 @@
+{
+  "name": "grid-ask",
+  "private": true,
+  "type": "module",
+  "description": "GRID Ask: answers questions from primary sources only (Cloudflare Worker).",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.2.0"
+  }
+}

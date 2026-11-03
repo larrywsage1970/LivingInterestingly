@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="sgw-mode" content="server">
+<meta name="sgw-ask-url" content="">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GRID">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -85,6 +86,27 @@
   <section class="card">
     <h2>Other primary sources</h2>
     <ul class="links" data-links="*rest"></ul>
+  </section>
+
+  <section class="card" id="card-ask" hidden>
+    <h2>Ask</h2>
+    <p class="hint">Answers come only from the primary sources on this board, with each source and time cited. Not for emergencies: call 911.</p>
+    <div class="chips" id="ask-chips">
+      <button type="button" class="chip">Any active alerts for Stow right now?</button>
+      <button type="button" class="chip">Is a winter storm or ice forecast in the next 48 hours?</button>
+      <button type="button" class="chip">How close is PJM demand to its recent peak?</button>
+      <button type="button" class="chip">What does a PJM Cold Weather Alert mean for me?</button>
+    </div>
+    <form id="ask-form" autocomplete="off">
+      <label class="sr" for="ask-q">Question</label>
+      <textarea id="ask-q" rows="2" maxlength="500" placeholder="Ask about current conditions or a post you saw"></textarea>
+      <div class="ask-row">
+        <label class="sr" for="ask-pass">Passcode</label>
+        <input id="ask-pass" type="password" placeholder="Passcode" autocomplete="current-password">
+        <button type="submit" class="btn ask-go" id="ask-go">Ask</button>
+      </div>
+    </form>
+    <div id="ask-out" aria-live="polite"></div>
   </section>
 
   <section class="card filter">

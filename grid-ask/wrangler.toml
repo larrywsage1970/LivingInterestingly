@@ -1,0 +1,22 @@
+name = "grid-ask"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Not secret: safe to keep in git. Change the model here without touching code.
+[vars]
+ANTHROPIC_MODEL = "claude-opus-5-5"
+STATUS_URL = "https://larrywsage1970.github.io/LivingInterestingly/api/status.json"
+ALLOWED_ORIGIN = "https://larrywsage1970.github.io"
+
+# Secrets live in Cloudflare's Secrets Store (same pattern as youtube-transcript):
+# Workers & Pages -> Secrets Store -> Create secret, then keep these bindings.
+[[secrets_store_secrets]]
+binding = "ANTHROPIC_API_KEY"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "ANTHROPIC_API_KEY"
+
+[[secrets_store_secrets]]
+binding = "ASK_PASSCODE"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "GRID_ASK_PASSCODE"
