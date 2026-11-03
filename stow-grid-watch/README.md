@@ -21,7 +21,8 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Severe storm / tornado outlook | NOAA SPC day 1-3 categorical + day 1 tornado GeoJSON, point-in-polygon for the location. Day 1 MDT/HIGH -> Amber (forecast). | no | 30 min |
 | Critical-infrastructure cyber | CISA joint cybersecurity advisories RSS, last 30 days, filtered to infrastructure/state-actor topics. Shown only. | no | 60 min |
 | Nearby nuclear plants | NRC event-notification RSS filtered to Perry, Beaver Valley, Davis-Besse; Emergency Class read from the report. General/Site Area Emergency -> Red, Alert -> Amber. | no | 30 min |
-| Air quality | EPA AirNow current observation by ZIP (needs `AIRNOW_API_KEY` secret). Category 4-5 -> Amber, 6 Hazardous -> Red. | no | 30 min |
+| Air quality | EPA AirNow public hourly file (`files.airnowtech.org`, no key; the web-service API was retired 2026-10-01). Nearest reporting area. Category 4-5 -> Amber, 6 Hazardous -> Red. | no | 30 min |
+| Health notices | CDC U.S. outbreak notices RSS, last 60 days. Shown only. | no | 60 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.
@@ -59,7 +60,7 @@ How it behaves on Pages:
 
 ## Sources checked and not connected
 - **PJM Emergency Procedures XML** (real-time PJM alerts): needs a PJM Tools account and browserless sign-in token; personal registration was refused (2026-11-03). GRID uses PJM Inside Lines RSS instead and links to the live Emergency Procedures page. If a member account becomes available, this is the upgrade path to a PJM-driven Red.
-- **CDC Health Alert Network**: no machine-readable HAN feed found (2026-11-03); link only.
+- **CDC Health Alert Network**: no current machine-readable HAN feed (the archive page's data file is a stale 2025 snapshot, checked 2026-11-03); link only.
 - **FirstEnergy outage map data**: not offered for reuse; not scraped. Owners should enroll in FirstEnergy text/email outage alerts for their own address.
 
 ## Phone alerts (phase 9)

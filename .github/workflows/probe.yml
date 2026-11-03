@@ -16,4 +16,9 @@ jobs:
       - working-directory: stow-grid-watch
         env:
           AIRNOW_API_KEY: ${{ secrets.AIRNOW_API_KEY }}
-        run: pip install -q httpx==0.28.1 && python -m tools.probe
+        run: |
+          pip install -q -r requirements-dev.txt
+          python -m pytest -q
+          python -m tools.probe
+          SGW_MIN_CADENCE_S=1800 SGW_USER_AGENT="GRID/0.1 (contact: larrywsage@gmail.com)" python -m app.snapshot --out /tmp/site
+          python -c "import json;d=json.load(open('/tmp/site/api/status.json'));print('snapshot bytes:', len(json.dumps(d)));print('forecast periods:', len(d['cards']['nws_forecast']['items']))"

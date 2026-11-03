@@ -34,7 +34,7 @@ def item(kind: str, title: str, url: str, *, severity=None, starts=None, ends=No
          raw_excerpt: str = "", **extra) -> dict:
     return {
         "kind": kind, "title": title, "severity": severity, "starts": starts,
-        "ends": ends, "url": url, "raw_excerpt": (raw_excerpt or "")[:400], **extra,
+        "ends": ends, "url": url, "raw_excerpt": (raw_excerpt or "")[:6000], **extra,
     }
 
 

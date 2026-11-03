@@ -24,7 +24,6 @@ def test_before_any_fetch_banner_is_gray():
 
 
 def test_refresh_then_status_every_item_has_source_and_time(monkeypatch):
-    monkeypatch.setenv("AIRNOW_API_KEY", "test-key")
     with client() as c:
         body = c.post("/api/refresh").json()
         assert body["banner"]["color"] == "red"

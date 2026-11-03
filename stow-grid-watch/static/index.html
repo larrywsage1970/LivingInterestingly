@@ -50,37 +50,37 @@
   </section>
 
   <section class="card" id="card-forecast">
-    <h2>Forecast · next 48h</h2>
-    <p class="hint">Forecasts are not events.</p>
+    <h2>Forecast</h2>
+    <p class="hint">Now, plus any period in the next 48 hours with storms, snow, ice or a hard freeze. Forecasts are not events.</p>
     <div class="feeds" data-feeds="nws_forecast noaa_spc"></div>
-    <ul class="items" data-items="noaa_spc nws_forecast"></ul>
+    <ul class="items" data-items="noaa_spc nws_forecast" data-forecast-trim="1"></ul>
   </section>
 
   <section class="card" id="card-fema">
-    <h2>Disasters</h2>
-    <p class="hint">Earthquakes within 300 km in the last 7 days (USGS), events at nearby nuclear plants (NRC: Perry, Beaver Valley, Davis-Besse), FEMA disaster declarations for this county, and air quality (EPA AirNow).</p>
-    <div class="feeds" data-feeds="usgs_quakes nrc fema_declarations airnow"></div>
-    <ul class="items" data-items="airnow usgs_quakes nrc fema_declarations" data-empty="No nearby earthquakes, nuclear plant events or active disaster declarations."></ul>
+    <h2>Disasters &amp; health</h2>
+    <p class="hint">Air quality (EPA AirNow), earthquakes within 300 km in the last 7 days (USGS), events at nearby nuclear plants (NRC: Perry, Beaver Valley, Davis-Besse), FEMA disaster declarations for this county, and CDC U.S. outbreak notices from the last 60 days.</p>
+    <div class="feeds" data-feeds="airnow usgs_quakes nrc fema_declarations cdc"></div>
+    <ul class="items" data-items="airnow usgs_quakes nrc fema_declarations cdc" data-empty="No nearby earthquakes, nuclear plant events, disaster declarations or outbreak notices."></ul>
   </section>
 
 
   <section class="card pending">
     <h2>Power</h2>
     <p class="hint"><strong>Outages at your address:</strong> FirstEnergy publishes no public outage feed. Text <strong>REG</strong> to <strong>544487</strong> to enroll, then <strong>OUT</strong> to report or <strong>STAT</strong> for status, or use the map below.</p>
-    <ul class="links" data-links="FirstEnergy"></ul>
+    <details class="links-fold"><summary>FirstEnergy links</summary><ul class="links" data-links="FirstEnergy"></ul></details>
     <p class="hint" style="margin-top:12px"><strong>Grid threats:</strong> geomagnetic storms that can damage the power grid (NOAA, G4 severe and G5 extreme matter), and federal cyber advisories about attacks on critical infrastructure (CISA, last 30 days).</p>
     <div class="feeds" data-feeds="noaa_swpc cisa"></div>
-    <ul class="items" data-items="noaa_swpc cisa"></ul>
+    <ul class="items" data-items="noaa_swpc cisa" data-empty="No geomagnetic storm now or forecast, and no current infrastructure cyber advisories."></ul>
     <p class="hint" style="margin-top:12px"><strong>Regional grid emergencies (PJM):</strong> alerts PJM has announced in the last 2 days, such as Maximum Generation or Load Management actions.</p>
     <div class="feeds" data-feeds="pjm_insidelines"></div>
     <ul class="items" data-items="pjm_insidelines" data-recent-only="1" data-empty="No PJM emergency actions announced in the last 2 days."></ul>
-    <ul class="links" data-links="PJM"></ul>
+    <details class="links-fold"><summary>PJM links</summary><ul class="links" data-links="PJM"></ul></details>
   </section>
 
 
   <section class="card">
-    <h2>Other primary sources</h2>
-    <ul class="links" data-links="*rest"></ul>
+    <h2>Source links</h2>
+    <details class="links-fold"><summary>Show all source links</summary><ul class="links" data-links="*rest"></ul></details>
   </section>
 
   <section class="card" id="card-ask" hidden>

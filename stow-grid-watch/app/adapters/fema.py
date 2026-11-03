@@ -100,6 +100,7 @@ def parse_ipaws(payload: dict, now: datetime) -> list[dict]:
             starts=info.get("onset") or info.get("effective") or a.get("sent"),
             ends=info.get("expires"),
             raw_excerpt=(info.get("description") or "") + (f" Area: {areas}" if areas else ""),
+            instruction=(info.get("instruction") or "")[:3000],
             event=info.get("event"),
             sender=info.get("senderName") or a.get("sender"),
             urgency=info.get("urgency"),
