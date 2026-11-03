@@ -34,6 +34,20 @@
       const h = (it.hazard_mentions || []).length ? `<span class="it-tag warn">mentions ${esc(it.hazard_mentions.join(", "))}</span>` : "";
       return `<span class="it-tag">forecast</span>${h}`;
     }
+    if (it.kind === "spaceweather") {
+      const g = it.g_scale || 0;
+      return `<span class="it-tag ${g >= 5 ? "crit" : g >= 4 ? "warn" : ""}">space weather · G${g}</span>`;
+    }
+    if (it.kind === "advisory") return `<span class="it-tag">CISA advisory</span>`;
+    if (it.kind === "nuclear") {
+      const c = (it.emergency_class || "").toLowerCase();
+      const cls = /general|site area/.test(c) ? "crit" : /^alert/.test(c) ? "warn" : "";
+      return `<span class="it-tag ${cls}">NRC · ${esc(it.emergency_class || "event report")}</span>`;
+    }
+    if (it.kind === "airquality") {
+      const c = it.aqi_category || 0;
+      return `<span class="it-tag ${c >= 6 ? "crit" : c >= 4 ? "warn" : ""}">air quality</span>`;
+    }
     if (it.kind === "quake") {
       const cls = ["orange", "red"].includes(it.pager) ? "crit" : it.pager === "yellow" ? "warn" : "";
       return `<span class="it-tag ${cls}">earthquake${it.pager ? " · PAGER " + esc(it.pager) : ""}</span>`;

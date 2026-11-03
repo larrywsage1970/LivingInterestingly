@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"VALID_ISO": "2030-01-10T16:30:00+00:00", "EXPIRE_ISO": "2030-01-11T12:00:00+00:00", "ISSUE_ISO": "2030-01-10T16:26:00+00:00", "DN": 10}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-82.44, 40.16], [-80.44, 40.16], [-80.44, 42.16], [-82.44, 42.16], [-82.44, 40.16]]]]}}]}

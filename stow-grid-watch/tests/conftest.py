@@ -37,6 +37,16 @@ def mock_transport(alerts="nws_alerts_empty.json", fail=None):
             return httpx.Response(200, json=fixture("nws_points.json"))
         if p.endswith("/forecast"):
             return httpx.Response(200, json=fixture("nws_forecast.json"))
+        if p == "/products/noaa-scales.json":
+            return httpx.Response(200, json=fixture("swpc_quiet.json"))
+        if p.startswith("/products/outlook/"):
+            return httpx.Response(200, json={"type": "FeatureCollection", "features": []})
+        if p == "/cybersecurity-advisories/cybersecurity-advisories.xml":
+            return httpx.Response(200, text="<rss><channel></channel></rss>")
+        if p == "/public-involve/rss":
+            return httpx.Response(200, text="<rss><channel></channel></rss>")
+        if p == "/aq/observation/zipCode/current/":
+            return httpx.Response(200, json=[])
         if p == "/ntas/1.1/alerts.xml":
             return httpx.Response(200, text=(FIX / "dhs_ntas_empty.xml").read_text(),
                                   headers={"content-type": "application/rss+xml"})

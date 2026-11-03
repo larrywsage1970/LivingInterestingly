@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 
-from app.adapters import dhs, fema, nws, pjm, usgs
+from app.adapters import dhs, fema, gov_extra, noaa, nws, pjm, usgs
 from app.adapters.base import SourceSpec
 
 SOURCES: tuple[SourceSpec, ...] = (
@@ -25,6 +25,21 @@ SOURCES: tuple[SourceSpec, ...] = (
     # Earthquakes near the location. Optional.
     SourceSpec("usgs_quakes", "USGS earthquakes (300 km, 7 days)", cadence_s=1800, required=False,
                fetch=usgs.fetch, home_url=lambda loc: usgs.HOME),
+    # NOAA space weather: geomagnetic storms that can affect the power grid.
+    SourceSpec("noaa_swpc", "NOAA space weather (grid storms)", cadence_s=1800, required=False,
+               fetch=noaa.fetch_swpc, home_url=lambda loc: noaa.SWPC_HOME),
+    # NOAA Storm Prediction Center: severe storm / tornado outlook, days 1-3.
+    SourceSpec("noaa_spc", "NOAA severe storm & tornado outlook", cadence_s=1800, required=False,
+               fetch=noaa.fetch_spc, home_url=lambda loc: noaa.SPC_HOME),
+    # CISA critical-infrastructure cyber advisories (filtered).
+    SourceSpec("cisa", "CISA critical-infrastructure cyber advisories", cadence_s=3600, required=False,
+               fetch=gov_extra.fetch_cisa, home_url=lambda loc: gov_extra.CISA_HOME),
+    # NRC event reports for nearby nuclear plants.
+    SourceSpec("nrc", "NRC nuclear plant events (nearby)", cadence_s=1800, required=False,
+               fetch=gov_extra.fetch_nrc, home_url=lambda loc: gov_extra.NRC_HOME),
+    # EPA AirNow air quality (needs AIRNOW_API_KEY).
+    SourceSpec("airnow", "EPA AirNow air quality", cadence_s=1800, required=False,
+               fetch=gov_extra.fetch_airnow, home_url=lambda loc: gov_extra.AIRNOW_HOME),
     # PJM's own operations news (RSS). Optional: a news outage should not gray the banner.
     SourceSpec("pjm_insidelines", "PJM Inside Lines · Operations", cadence_s=1800, required=False,
                fetch=pjm.fetch, home_url=lambda loc: pjm.HOME),

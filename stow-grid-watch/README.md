@@ -17,6 +17,11 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Utility outages | FirstEnergy: **no public outage data feed** (checked 2026-11-03; the outage map is an interactive app with internal data). Link-outs only: outage page, map, town search, text/email alerts. | n/a | n/a |
 | National security / terrorism | DHS NTAS XML feed (`dhs.gov/ntas/1.1/alerts.xml`). Imminent Threat Alert -> Red, Elevated -> Amber, Bulletin -> shown only. | no | 30 min |
 | Earthquakes | USGS FDSN GeoJSON, 300 km / 7 days / M2.5+. PAGER orange/red -> Red, yellow -> Amber; M4.5+ within 150 km in 24 h -> Amber. | no | 30 min |
+| Space weather (grid) | NOAA SWPC `noaa-scales.json`. Observed G5 -> Red, G4 -> Amber, forecast G4+ -> Amber. | no | 30 min |
+| Severe storm / tornado outlook | NOAA SPC day 1-3 categorical + day 1 tornado GeoJSON, point-in-polygon for the location. Day 1 MDT/HIGH -> Amber (forecast). | no | 30 min |
+| Critical-infrastructure cyber | CISA joint cybersecurity advisories RSS, last 30 days, filtered to infrastructure/state-actor topics. Shown only. | no | 60 min |
+| Nearby nuclear plants | NRC event-notification RSS filtered to Perry, Beaver Valley, Davis-Besse; Emergency Class read from the report. General/Site Area Emergency -> Red, Alert -> Amber. | no | 30 min |
+| Air quality | EPA AirNow current observation by ZIP (needs `AIRNOW_API_KEY` secret). Category 4-5 -> Amber, 6 Hazardous -> Red. | no | 30 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.
@@ -54,6 +59,7 @@ How it behaves on Pages:
 
 ## Sources checked and not connected
 - **PJM Emergency Procedures XML** (real-time PJM alerts): needs a PJM Tools account and browserless sign-in token; personal registration was refused (2026-11-03). GRID uses PJM Inside Lines RSS instead and links to the live Emergency Procedures page. If a member account becomes available, this is the upgrade path to a PJM-driven Red.
+- **CDC Health Alert Network**: no machine-readable HAN feed found (2026-11-03); link only.
 - **FirstEnergy outage map data**: not offered for reuse; not scraped. Owners should enroll in FirstEnergy text/email outage alerts for their own address.
 
 ## Phone alerts (phase 9)
