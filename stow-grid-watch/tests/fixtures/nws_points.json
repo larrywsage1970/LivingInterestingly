@@ -1,0 +1,6 @@
+{
+ "properties": {
+  "forecast": "https://api.weather.gov/gridpoints/CLE/0,0/forecast",
+  "forecastHourly": "https://api.weather.gov/gridpoints/CLE/0,0/forecast/hourly"
+ }
+}

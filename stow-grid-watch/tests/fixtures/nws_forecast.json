@@ -1,0 +1,72 @@
+{
+ "properties": {
+  "periods": [
+   {
+    "number": 1,
+    "name": "Today",
+    "startTime": "2030-01-10T06:00:00-05:00",
+    "endTime": "2030-01-10T18:00:00-05:00",
+    "isDaytime": true,
+    "temperature": 30,
+    "temperatureUnit": "F",
+    "shortForecast": "Cloudy",
+    "detailedForecast": "SYNTHETIC. Cloudy."
+   },
+   {
+    "number": 2,
+    "name": "Tonight",
+    "startTime": "2030-01-10T18:00:00-05:00",
+    "endTime": "2030-01-11T06:00:00-05:00",
+    "isDaytime": false,
+    "temperature": 8,
+    "temperatureUnit": "F",
+    "shortForecast": "Light snow likely",
+    "detailedForecast": "SYNTHETIC. Light snow likely."
+   },
+   {
+    "number": 3,
+    "name": "Saturday",
+    "startTime": "2030-01-11T06:00:00-05:00",
+    "endTime": "2030-01-11T18:00:00-05:00",
+    "isDaytime": true,
+    "temperature": 22,
+    "temperatureUnit": "F",
+    "shortForecast": "Snow showers",
+    "detailedForecast": "SYNTHETIC. Snow showers."
+   },
+   {
+    "number": 4,
+    "name": "Saturday Night",
+    "startTime": "2030-01-11T18:00:00-05:00",
+    "endTime": "2030-01-12T06:00:00-05:00",
+    "isDaytime": false,
+    "temperature": 15,
+    "temperatureUnit": "F",
+    "shortForecast": "Mostly cloudy",
+    "detailedForecast": "SYNTHETIC. Mostly cloudy."
+   },
+   {
+    "number": 5,
+    "name": "Sunday",
+    "startTime": "2030-01-12T06:00:00-05:00",
+    "endTime": "2030-01-12T18:00:00-05:00",
+    "isDaytime": true,
+    "temperature": 28,
+    "temperatureUnit": "F",
+    "shortForecast": "Sunny",
+    "detailedForecast": "SYNTHETIC. Sunny."
+   },
+   {
+    "number": 6,
+    "name": "Sunday Night",
+    "startTime": "2030-01-12T18:00:00-05:00",
+    "endTime": "2030-01-13T06:00:00-05:00",
+    "isDaytime": false,
+    "temperature": -5,
+    "temperatureUnit": "F",
+    "shortForecast": "Clear",
+    "detailedForecast": "SYNTHETIC. Clear."
+   }
+  ]
+ }
+}

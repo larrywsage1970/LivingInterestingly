@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stow Grid Watch</title>
+<meta name="description" content="Primary-source status for Stow, OH: weather alerts, local and federal emergency alerts, grid and utility.">
+<meta name="theme-color" content="#0b1416" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f6f5" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Grid Watch">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-main">
+    <div>
+      <h1 id="loc-name">Stow Grid Watch</h1>
+      <p class="meta" id="loc-meta">Loading…</p>
+    </div>
+    <button id="refresh" class="btn" aria-label="Refresh now">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 4a8 8 0 0 1 7.75 6h-2.1A6 6 0 1 0 18 13h2a8 8 0 1 1-8-9Zm5 0h3v6h-6V7h2.3A6 6 0 0 0 12 6V4c1.9 0 3.7.7 5 1.8V4Z"/></svg>
+    </button>
+  </div>
+  <p class="meta mono" id="updated">updated --:--</p>
+</header>
+
+<main>
+  <section id="banner" class="banner gray" aria-live="polite">
+    <div class="banner-row"><span class="dot"></span><strong id="banner-label">UNKNOWN</strong></div>
+    <p id="banner-rule" class="banner-rule">Waiting for first data…</p>
+  </section>
+  <p id="offline" class="offline" hidden>Offline: showing the last copy saved on this device.</p>
+
+  <section class="card" id="card-alerts">
+    <h2>Local alerts</h2>
+    <p class="hint">Weather alerts (NWS) and alerts from county, state and federal authorities (IPAWS). These are events that have been issued.</p>
+    <div class="feeds" data-feeds="nws_alerts fema_ipaws"></div>
+    <ul class="items" data-items="nws_alerts fema_ipaws"></ul>
+  </section>
+
+  <section class="card" id="card-forecast">
+    <h2>Forecast · next 48h</h2>
+    <p class="hint">Forecasts are not events.</p>
+    <div class="feeds" data-feeds="nws_forecast"></div>
+    <ul class="items" data-items="nws_forecast"></ul>
+  </section>
+
+  <section class="card" id="card-fema">
+    <h2>Emergency declarations</h2>
+    <p class="hint">FEMA declarations for this county, the 10 most recent.</p>
+    <div class="feeds" data-feeds="fema_declarations"></div>
+    <ul class="items" data-items="fema_declarations"></ul>
+  </section>
+
+  <section class="card pending">
+    <h2>Grid · PJM</h2>
+    <p class="hint">Not connected yet (phases 4–5). Check the source.</p>
+    <ul class="links" data-links="PJM"></ul>
+  </section>
+
+  <section class="card pending">
+    <h2>Utility outages</h2>
+    <p class="hint">Not connected yet (phase 6). Check the source.</p>
+    <ul class="links" data-links="FirstEnergy"></ul>
+  </section>
+
+  <section class="card pending">
+    <h2>Reliability reports</h2>
+    <p class="hint">Not connected yet. Check the source.</p>
+    <ul class="links" data-links="NERC"></ul>
+  </section>
+
+  <section class="card">
+    <h2>Other primary sources</h2>
+    <ul class="links" data-links="*rest"></ul>
+  </section>
+
+  <section class="card filter">
+    <h2>Before you believe a post</h2>
+    <ol>
+      <li><strong>Who said it?</strong> Name the primary source (NWS, county or state EMA, FEMA, PJM, FirstEnergy). No source, no belief.</li>
+      <li><strong>Event or risk?</strong> Has an alert actually been issued, or is it a forecast, an assessment or someone's opinion?</li>
+      <li><strong>Where and when?</strong> Does it name your county and give a date and time, or is it vague and undated?</li>
+      <li><strong>Can you find it?</strong> Open the source page yourself. If it isn't there, treat the post as unverified.</li>
+    </ol>
+  </section>
+</main>
+
+<footer class="foot meta">Primary sources only. Every item links to its source. Gray means a feed is unavailable or stale, never "all clear".</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
