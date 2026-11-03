@@ -53,13 +53,13 @@ def test_empty_fixture_is_green(loc):
 # ---- gray / staleness ----
 
 def test_required_feed_stale_beyond_2x_cadence_is_gray(loc):
-    old = res("nws_alerts", [], age_s=2 * 300 + 1)
+    old = res("nws_alerts", [], age_s=2 * BY_ID["nws_alerts"].cadence_s + 1)
     b = run(loc, overrides={"nws_alerts": (old, old)})
     assert b["color"] == "gray" and "NWS alerts is stale" in b["rule"]
 
 
 def test_required_feed_at_exactly_2x_cadence_is_still_fresh(loc):
-    edge = res("nws_alerts", [], age_s=600)
+    edge = res("nws_alerts", [], age_s=2 * BY_ID["nws_alerts"].cadence_s)
     assert run(loc, overrides={"nws_alerts": (edge, edge)})["color"] == "green"
 
 

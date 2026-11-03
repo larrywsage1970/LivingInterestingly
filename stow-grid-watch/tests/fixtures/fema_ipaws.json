@@ -19,7 +19,7 @@
      "description": "SYNTHETIC TEST TEXT.",
      "effective": "2030-01-10T10:00:00-05:00",
      "expires": "2030-01-12T10:00:00-05:00",
-     "area": [
+     "areas": [
       {
        "areaDesc": "Summit County, OH"
       }
@@ -45,7 +45,7 @@
      "description": "SYNTHETIC TEST TEXT.",
      "effective": "2030-01-10T10:00:00-05:00",
      "expires": "2030-01-10T14:00:00-05:00",
-     "area": [
+     "areas": [
       {
        "areaDesc": "Summit County, OH"
       }
@@ -71,7 +71,7 @@
      "description": "SYNTHETIC TEST TEXT.",
      "effective": "2030-01-10T10:00:00-05:00",
      "expires": "2030-01-12T10:00:00-05:00",
-     "area": [
+     "areas": [
       {
        "areaDesc": "Summit County, OH"
       }
@@ -97,7 +97,7 @@
      "description": "SYNTHETIC TEST TEXT.",
      "effective": "2030-01-10T10:00:00-05:00",
      "expires": "2030-01-12T10:00:00-05:00",
-     "area": [
+     "areas": [
       {
        "areaDesc": "Summit County, OH"
       }
@@ -123,7 +123,7 @@
      "description": "SYNTHETIC TEST TEXT.",
      "effective": "2030-01-10T10:00:00-05:00",
      "expires": "2030-01-09T10:00:00-05:00",
-     "area": [
+     "areas": [
       {
        "areaDesc": "Summit County, OH"
       }

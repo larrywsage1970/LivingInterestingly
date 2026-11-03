@@ -10,7 +10,7 @@ A phone-first status board for one location, built from primary sources only. Ev
 |---|---|---|---|
 | Weather alerts | NWS `api.weather.gov/alerts/active?point=` | yes | 5 min |
 | Forecast (48h) | NWS `/points` → `/forecast` | yes | 30 min |
-| Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates) | no, until verified live | 10 min |
+| Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | no | 10 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS) | no, until verified live | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.
@@ -51,9 +51,9 @@ Add an object to `locations.json` (lat/lon, FIPS state + county, threshold, link
 
 ## Before going live: verify
 - [ ] The lat/lon for 44224 (41.1595, -81.4404) returns the right NWS forecast office (CLE).
-- [ ] The NWS calls work with your User-Agent.
-- [ ] The OpenFEMA IPAWS `geo.intersects(searchGeometry, …)` filter returns Summit County messages, and check how far behind real time the archive runs.
-- [ ] The OpenFEMA declarations filter on `fipsStateCode`/`fipsCountyCode`.
+- [x] The NWS calls work with the configured User-Agent (verified 2026-11-03).
+- [x] OpenFEMA IPAWS query verified live 2026-11-03 (syntax is `geography'POINT(lon lat)'`, no space). The archive is current to within days. About 40% of recent records have no geometry, which the second query covers.
+- [x] OpenFEMA declarations filter verified live 2026-11-03.
 - [ ] The URLs marked `"verified": false` in `locations.json`.
 - [ ] Replace the synthetic fixtures with recorded responses.
 

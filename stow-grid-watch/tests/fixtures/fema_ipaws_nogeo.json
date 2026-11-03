@@ -1,0 +1,113 @@
+{
+ "metadata": {},
+ "IpawsArchivedAlerts": [
+  {
+   "identifier": "NG1",
+   "sender": "test@ohio.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "searchGeometry": null,
+   "originalMessage": "<geocode><valueName>SAME</valueName><value>039153</value></geocode>",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Boil Water Notice",
+     "severity": "Moderate",
+     "urgency": "Expected",
+     "certainty": "Likely",
+     "senderName": "SYNTHETIC State EMA",
+     "headline": "SYNTHETIC Boil Water Notice",
+     "description": "SYNTHETIC TEST TEXT.",
+     "expires": "2099-01-01T00:00:00-05:00",
+     "areas": [
+      {
+       "areaDesc": "Some area"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "NG2",
+   "sender": "test@ohio.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "searchGeometry": null,
+   "originalMessage": "",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Local Area Emergency",
+     "severity": "Moderate",
+     "urgency": "Expected",
+     "certainty": "Likely",
+     "senderName": "SYNTHETIC State EMA",
+     "headline": "SYNTHETIC Local Area Emergency",
+     "description": "SYNTHETIC TEST TEXT.",
+     "expires": "2099-01-01T00:00:00-05:00",
+     "areas": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "NG3",
+   "sender": "test@ohio.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "searchGeometry": null,
+   "originalMessage": "<value>039035</value>",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Other County Notice",
+     "severity": "Moderate",
+     "urgency": "Expected",
+     "certainty": "Likely",
+     "senderName": "SYNTHETIC State EMA",
+     "headline": "SYNTHETIC Other County Notice",
+     "description": "SYNTHETIC TEST TEXT.",
+     "expires": "2099-01-01T00:00:00-05:00",
+     "areas": [
+      {
+       "areaDesc": "Cuyahoga County, OH"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "identifier": "T1",
+   "sender": "test@ohio.example",
+   "sent": "2030-01-10T10:00:00-05:00",
+   "status": "Actual",
+   "msgType": "Alert",
+   "searchGeometry": null,
+   "originalMessage": "<value>039153</value>",
+   "info": [
+    {
+     "language": "en-US",
+     "event": "Duplicate Of Geo Record",
+     "severity": "Moderate",
+     "urgency": "Expected",
+     "certainty": "Likely",
+     "senderName": "SYNTHETIC State EMA",
+     "headline": "SYNTHETIC Duplicate Of Geo Record",
+     "description": "SYNTHETIC TEST TEXT.",
+     "expires": "2099-01-01T00:00:00-05:00",
+     "areas": [
+      {
+       "areaDesc": "Summit County, OH"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
