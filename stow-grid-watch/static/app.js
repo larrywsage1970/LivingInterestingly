@@ -53,8 +53,6 @@
       const cls = ["orange", "red"].includes(it.pager) ? "crit" : it.pager === "yellow" ? "warn" : "";
       return `<span class="it-tag ${cls}">earthquake${it.pager ? " · PAGER " + esc(it.pager) : ""}</span>`;
     }
-    if (it.kind === "notice") return it.ops_action && it.recent
-      ? `<span class="it-tag warn">PJM operations update</span>` : `<span class="it-tag">PJM notice</span>`;
     if (it.kind === "declaration") {
       return it.active ? `<span class="it-tag warn">active declaration</span>` : `<span class="it-tag">closed declaration</span>`;
     }
@@ -109,6 +107,13 @@
     const loc = data.location, b = data.banner;
     $("#loc-meta").textContent = `${loc.name} · ${loc.county} · ${loc.utility} · ${loc.grid_operator}`;
     $("#updated").textContent = `updated ${hhmm(b.computed_at)}`;
+    // Version this page was loaded with vs. the newest published; a mismatch means "reopen".
+    const mine = document.querySelector('meta[name="sgw-version"]')?.content || "dev";
+    const latest = data.app_version || mine;
+    $("#version").textContent = latest !== mine
+      ? `version ${mine} · newer version ${latest} available: close and reopen GRID`
+      : `version ${mine}`;
+    $("#version").classList.toggle("stale-ver", latest !== mine);
     $("#offline").hidden = !offline;
 
     // The phone checks the snapshot's age itself: if the updater stops, the board turns Gray.

@@ -9,8 +9,7 @@ Precedence (first match wins):
   2. GRAY   any REQUIRED feed is failing, stale (> 2x cadence), or never fetched.
             Known Red is still shown; an unknown is never shown as Green or Amber.
   3. AMBER  NWS Watch or Advisory; any other active IPAWS alert; an active FEMA
-            declaration for the county; a forecast low <= the location threshold; or a
-            PJM post from the last 48h announcing an alert/advisory/emergency action; a DHS
+            declaration for the county; a forecast low <= the location threshold; or a DHS
             NTAS Elevated Threat Alert; or a nearby quake rated PAGER yellow, or M4.5+ within
             150 km in the last 24h; an observed G4 storm or forecast G4+; an SPC Day 1 Moderate/High
             severe-weather risk; a nearby nuclear plant Alert; or Unhealthy/Very Unhealthy air.
@@ -137,8 +136,6 @@ def compute(feeds: list[Feed], loc: Location, now: datetime) -> dict:
                     amber.append(f"{it['title']} (USGS PAGER yellow, checked {at})")
                 elif it.get("recent_24h") and it.get("magnitude", 0) >= 4.5 and it.get("distance_km", 999) <= 150:
                     amber.append(f"{it['title']} in the last 24 hours ({src}, checked {at})")
-            elif it["kind"] == "notice" and it.get("ops_action") and it.get("recent"):
-                amber.append(f"PJM operations notice: {it['title']} ({src}, checked {at})")
             elif it["kind"] == "declaration" and it.get("active"):
                 amber.append(f"Active federal declaration {it['title']} ({src}, checked {at})")
             elif it["kind"] == "forecast" and it.get("is_low"):

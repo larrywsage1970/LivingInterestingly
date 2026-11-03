@@ -60,6 +60,9 @@ jobs:
         working-directory: grid-ask
         run: npm ci --no-audit --no-fund && npm test
 
+      - name: Set app version
+        run: echo "SGW_VERSION=$(git log -1 --format=%cd --date=format:%Y.%m.%d)-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
+
       - name: Poll sources and build site
         env:
           # Set a repo variable SGW_USER_AGENT (Settings > Secrets and variables > Actions > Variables)
