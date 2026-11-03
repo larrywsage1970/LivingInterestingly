@@ -1,45 +1,41 @@
-"""Temporary probe: what machine-readable PJM emergency/ops feeds exist, and what do robots/terms allow."""
+"""Temporary probe 2: where the live PJM Emergency Procedures XML/RSS lives and its schema."""
 import re
 import httpx
 
 UA = {"User-Agent": "GRID/0.1 (contact: larrywsage@gmail.com)"}
-URLS = [
-    "https://www.pjm.com/robots.txt",
-    "https://www.pjm.com/markets-and-operations/etools/emerg-procedure.aspx",
-    "https://emergencyprocedures.pjm.com/robots.txt",
-    "https://emergencyprocedures.pjm.com/ep/pages/dashboard.jsf",
-    "https://emergencyprocedures.pjm.com/",
-    "https://insidelines.pjm.com/robots.txt",
-    "https://insidelines.pjm.com/feed/",
-    "https://insidelines.pjm.com/category/operations/feed/",
-    "https://api.pjm.com/api/v1/",
-    "https://dataminer2.pjm.com/feed/list",
-    "https://www.pjm.com/-/media/etc/rss.ashx",
-]
-LINK = re.compile(r'''(?:href|src)=["']([^"']*(?:rss|feed|xml|json|api|export|download|\.csv)[^"']*)["']''', re.I)
+B = "https://www.pjm.com"
+
+
+def text(html: str) -> str:
+    t = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.S | re.I)
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
+
 
 with httpx.Client(timeout=25, headers=UA, follow_redirects=True) as c:
-    for u in URLS:
-        try:
-            r = c.get(u)
-        except Exception as e:  # noqa: BLE001
-            print(f"\n=== {u}\n  ERR {type(e).__name__}: {e}"); continue
-        ct = r.headers.get("content-type", "")
-        print(f"\n=== {u}\n  HTTP {r.status_code} | {ct} | {len(r.content)} bytes | final {r.url}")
-        body = r.text
-        if "robots.txt" in u and r.status_code == 200:
-            print("  " + "\n  ".join(l for l in body.splitlines() if l.strip())[:1500])
-            continue
-        if "xml" in ct or "rss" in ct or body.lstrip().startswith("<?xml"):
-            items = re.findall(r"<item>.*?<title>(.*?)</title>.*?<pubDate>(.*?)</pubDate>", body, re.S)
-            print(f"  feed items: {len(items)}; first: {items[:3]}")
-            cats = sorted(set(re.findall(r"<category><!\[CDATA\[(.*?)\]\]></category>", body)))[:20]
-            print(f"  categories: {cats}")
-            continue
-        if "json" in ct:
-            print("  json head:", body[:300]); continue
-        links = sorted(set(LINK.findall(body)))[:40]
-        print(f"  candidate links ({len(links)}):"); [print("   ", l) for l in links]
-        for kw in ["Terms", "terms of use", "Hot Weather Alert", "Cold Weather Alert", "Maximum Generation", "Load Management", "No active"]:
-            if kw.lower() in body.lower():
-                print(f"  mentions: {kw}")
+    r = c.get(B + "/markets-and-operations/etools/emerg-procedure.aspx")
+    t = text(r.text)
+    for kw in ["XML", "RSS", "subscribe", "API", "Data Miner", "terms"]:
+        for m in list(re.finditer(kw, t))[:3]:
+            print(f"[emerg page ~{kw}] ...{t[max(0, m.start()-220):m.end()+260]}...")
+    print("\n=== sample-active-cwa.xml")
+    s = c.get(B + "/-/media/DotCom/etools/emerg-procedures/sample-active-cwa.xml")
+    print(s.status_code, s.headers.get("content-type"), "\n", s.text[:1800])
+    print("\n=== epsample.xml (head)")
+    print(c.get(B + "/-/media/DotCom/etools/emerg-procedures/epsample.xml").text[:900])
+    for u in ["https://rss.pjm.com/", B + "/about-pjm/newsroom/rss-feeds"]:
+        r = c.get(u)
+        print(f"\n=== {u} HTTP {r.status_code} {r.headers.get('content-type')} final {r.url}")
+        links = sorted(set(re.findall(r'href=["\']([^"\']+)["\']', r.text)))
+        for l in links:
+            if re.search(r"rss|xml|feed|emerg|ep", l, re.I):
+                print("   ", l)
+        tt = text(r.text)
+        for m in list(re.finditer(r"[Ee]mergency", tt))[:4]:
+            print("   ctx:", tt[max(0, m.start()-150):m.end()+200])
+    for u in ["https://emergencyprocedures.pjm.com/ep/rss", "https://emergencyprocedures.pjm.com/ep/rss.xml",
+              "https://emergencyprocedures.pjm.com/ep/pages/rss.jsf", "https://rss.pjm.com/emergencyprocedures",
+              "https://rss.pjm.com/ep"]:
+        r = c.get(u)
+        print(f"\n=== {u} HTTP {r.status_code} {r.headers.get('content-type')} {len(r.content)}b final {r.url}")
+        if r.status_code == 200 and ("xml" in (r.headers.get("content-type") or "") or r.text.lstrip().startswith("<?xml")):
+            print(r.text[:1200])
