@@ -2,8 +2,9 @@
 
 This is PJM announcing operations actions in plain language ("Operations Update: PJM Issues
 Cold Weather Alert for ..."). It is NOT the real-time Emergency Procedures system, which
-needs a PJM Tools account. Posts are kind "notice"; only recent "Operations Update" posts
-that name an alert/advisory/emergency action count toward the banner (Amber, never Red).
+needs a PJM Tools account. Posts are kind "notice"; only posts from the last 48h whose title
+names an alert/advisory/emergency action AND says PJM is issuing/extending/declaring it (or is an
+"Operations Update") count toward the banner (Amber, never Red). Retrospectives do not.
 """
 from __future__ import annotations
 
@@ -23,6 +24,9 @@ RECENT = timedelta(hours=48)
 OPS_ACTION = re.compile(
     r"(hot|cold) weather alert|maximum generation|max gen|load management|capacity advisory|"
     r"conservative operations|emergency|voltage reduction|load shed", re.IGNORECASE)
+# PJM taking or extending an action now, not reviewing one afterward ("PJM Reviews ...").
+ACTION_VERB = re.compile(r"\b(issues?|issued|extends?|extended|calls? on|declares?|declared|initiates?|"
+                         r"initiated|activates?|activated)\b", re.IGNORECASE)
 
 
 def _text(el, tag: str) -> str:
@@ -44,8 +48,8 @@ def parse(xml_text: str, now: datetime, limit: int = 8) -> list[dict]:
             continue
         cats = [c.text.strip() for c in it.findall("category") if c.text]
         desc = re.sub(r"<[^>]+>", " ", _text(it, "description"))
-        is_ops_update = title.lower().startswith("operations update")
-        names_action = bool(OPS_ACTION.search(title))
+        names_action = bool(OPS_ACTION.search(title)) and (
+            title.lower().startswith("operations update") or bool(ACTION_VERB.search(title)))
         items.append(item(
             "notice",
             title=title,
@@ -55,7 +59,7 @@ def parse(xml_text: str, now: datetime, limit: int = 8) -> list[dict]:
             issued=posted.isoformat(),
             sender="PJM Inside Lines",
             categories=cats[:8],
-            ops_action=is_ops_update and names_action,
+            ops_action=names_action,
             recent=(now - posted) <= RECENT,
         ))
     items.sort(key=lambda i: i["starts"], reverse=True)

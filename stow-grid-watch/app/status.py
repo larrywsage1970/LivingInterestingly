@@ -7,7 +7,7 @@ Precedence (first match wins):
             Known Red is still shown; an unknown is never shown as Green or Amber.
   3. AMBER  NWS Watch or Advisory; any other active IPAWS alert; an active FEMA
             declaration for the county; a forecast low <= the location threshold; or a
-            PJM "Operations Update" post from the last 48h naming an alert/advisory/emergency action.
+            PJM post from the last 48h announcing an alert/advisory/emergency action.
   4. GREEN  none of the above and all required feeds fresh.
 
 "Usable" data = the last good fetch of a feed, if it is no older than 2x cadence.

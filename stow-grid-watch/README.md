@@ -13,7 +13,7 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Weather alerts | NWS `api.weather.gov/alerts/active?point=` | yes | 5 min |
 | Forecast (48h) | NWS `/points` → `/forecast` | yes | 30 min |
 | Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | yes | 10 min |
-| PJM operations notices | PJM Inside Lines Operations RSS (`insidelines.pjm.com/category/operations/feed/`). Amber only for an "Operations Update" post from the last 48h naming an alert/advisory/emergency action. Not the real-time Emergency Procedures system (that needs a PJM Tools account). | no | 30 min |
+| PJM operations notices | PJM Inside Lines Operations RSS (`insidelines.pjm.com/category/operations/feed/`). Amber only for a post from the last 48h announcing an alert/advisory/emergency action (retrospectives excluded). Not the real-time Emergency Procedures system (that needs a PJM Tools account). | no | 30 min |
 | PJM demand + day-ahead forecast | EIA Open Data v2 `electricity/rto/region-data` (needs `EIA_API_KEY` repo secret). Context only, no banner effect. | no | 60 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
