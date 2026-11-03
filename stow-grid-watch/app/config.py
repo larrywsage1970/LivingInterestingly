@@ -29,6 +29,7 @@ class Location:
     utility: str
     grid_operator: str
     forecast_low_amber_f: float
+    tz: str = "America/New_York"
     links: tuple[Link, ...] = field(default_factory=tuple)
 
 

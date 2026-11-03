@@ -13,6 +13,7 @@
       "utility": "FirstEnergy (Ohio Edison)",
       "grid_operator": "PJM",
       "forecast_low_amber_f": 10,
+      "tz": "America/New_York",
       "links": [
         {"label": "NWS Cleveland office", "url": "https://www.weather.gov/cle/", "verified": true},
         {"label": "FEMA disaster declarations (Ohio)", "url": "https://www.fema.gov/locations/ohio", "verified": false},

@@ -13,8 +13,9 @@
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const hhmm = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
-  const when = (iso) => iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  // Every time on the page carries its date (e.g. "Nov 3, 11:09 AM").
+  const hhmm = (iso) => iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "--";
+  const when = (iso) => iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
   const safeUrl = (u) => /^https:\/\//i.test(u || "") ? u : "#";
 
   const LABELS = { green: "GREEN · NO ACTIVE ALERTS", amber: "AMBER · ADVISORY / WATCH", red: "RED · WARNING", gray: "GRAY · UNKNOWN" };
