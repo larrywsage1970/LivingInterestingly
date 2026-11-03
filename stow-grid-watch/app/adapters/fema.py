@@ -111,11 +111,12 @@ def parse_ipaws(payload: dict, now: datetime) -> list[dict]:
 
 
 def _matches_county(rec: dict, loc: Location) -> bool:
-    """For records with no geometry: match the county or statewide SAME code, or the county name."""
+    """For records with no geometry: match county, statewide or national SAME code, or the county name."""
     county_same = f"0{loc.fips_state}{loc.fips_county}"   # e.g. 039153
     state_same = f"0{loc.fips_state}000"                  # statewide, e.g. 039000
     text = rec.get("originalMessage") or ""
-    if county_same in text or state_same in text:
+    national_same = "000000"                              # all of the United States
+    if county_same in text or state_same in text or f">{national_same}<" in text:
         return True
     county_word = loc.county.split()[0]                    # "Summit"
     for info in rec.get("info") or []:

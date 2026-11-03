@@ -14,4 +14,11 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - working-directory: stow-grid-watch
-        run: pip install -q httpx==0.28.1 && python -m tools.probe
+        env:
+          SGW_USER_AGENT: "GRID/0.1 (contact: larrywsage@gmail.com)"
+          SGW_MIN_CADENCE_S: "1800"
+        run: |
+          pip install -q -r requirements-dev.txt
+          python -m pytest -q
+          python -m tools.probe
+          python -m app.snapshot --out /tmp/site

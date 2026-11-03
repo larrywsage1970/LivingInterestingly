@@ -13,9 +13,9 @@ def test_parse_flags_recent_operations_update_only():
     got = {i["title"].split(" (")[0]: (i["ops_action"], i["recent"]) for i in items()}
     assert got["Operations Update: PJM Issues Cold Weather Alert for Jan. 11"] == (True, True)
     assert got["Operations Update: PJM Issues Hot Weather Alert"] == (True, False)   # older than 48h
-    assert got["PJM Explains Winter Preparations"] == (False, True)                  # not an ops action
+    assert "PJM Explains Winter Preparations" not in got                              # not an emergency action: dropped
     assert got["PJM Issues Maximum Generation Alert for Jan. 11"] == (True, True)    # no prefix needed
-    assert got["PJM Reviews December Cold Weather Alert Operations"] == (False, True)  # retrospective
+    assert "PJM Reviews December Cold Weather Alert Operations" not in got           # retrospective: dropped
     assert all(i["url"].startswith("https://insidelines.pjm.com/") for i in items())  # off-site dropped
     assert all(i["kind"] == "notice" and i["severity"] is None for i in items())
 
@@ -27,7 +27,7 @@ def test_recent_ops_update_is_amber_with_rule(loc):
 
 
 def test_no_ops_update_stays_green(loc):
-    b = run_with([i for i in items() if not i["ops_action"]], loc)
+    b = run_with([], loc)
     assert b["color"] == "green"
 
 

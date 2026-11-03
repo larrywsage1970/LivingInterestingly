@@ -1,0 +1,63 @@
+{
+ "type": "FeatureCollection",
+ "metadata": {},
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "mag": 4.8,
+    "place": "SYNTHETIC 20 km N of Akron, Ohio",
+    "time": 1894291200000,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/synthetic",
+    "title": "SYNTHETIC M 4.8 - SYNTHETIC 20 km N of Akron, Ohio",
+    "alert": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -81.52,
+     41.25,
+     5.0
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "mag": 3.1,
+    "place": "SYNTHETIC 250 km E of Stow",
+    "time": 1893862800000,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/synthetic",
+    "title": "SYNTHETIC M 3.1 - SYNTHETIC 250 km E of Stow",
+    "alert": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -78.5,
+     41.1,
+     5.0
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "mag": 5.9,
+    "place": "SYNTHETIC southern Ohio",
+    "time": 1894122000000,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/synthetic",
+    "title": "SYNTHETIC M 5.9 - SYNTHETIC southern Ohio",
+    "alert": "orange"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.5,
+     39.5,
+     5.0
+    ]
+   }
+  }
+ ]
+}
