@@ -14,7 +14,7 @@ def client(alerts="nws_alerts_warning.json", fail=None):
 def test_health_and_static():
     with client() as c:
         assert c.get("/api/health").json()["ok"] is True
-        assert "Stow Grid Watch" in c.get("/").text
+        assert "<title>GRID</title>" in c.get("/").text
         assert c.get("/manifest.webmanifest").status_code == 200
 
 

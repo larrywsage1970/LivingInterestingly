@@ -42,7 +42,7 @@ class Settings:
 
 def get_settings() -> Settings:
     return Settings(
-        user_agent=os.environ.get("SGW_USER_AGENT", "StowGridWatch/0.1 (contact: unset)"),
+        user_agent=os.environ.get("SGW_USER_AGENT", "GRID/0.1 (contact: unset)"),
         db_path=Path(os.environ.get("SGW_DB_PATH", BASE_DIR / "data" / "sgw.sqlite3")),
         locations_file=Path(os.environ.get("SGW_LOCATIONS_FILE", BASE_DIR / "locations.json")),
         poll=os.environ.get("SGW_POLL", "1") == "1",

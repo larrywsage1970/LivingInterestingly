@@ -1,4 +1,6 @@
-# Stow Grid Watch
+# GRID
+
+Primary-source status board. First location: Stow, OH 44224.
 
 A phone-first status board for one location, built from primary sources only. Every line shows its source, the time it was fetched, and a link to the source. When a feed is down, the board says so (Gray). It never shows a stale green.
 
@@ -11,7 +13,7 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Weather alerts | NWS `api.weather.gov/alerts/active?point=` | yes | 5 min |
 | Forecast (48h) | NWS `/points` → `/forecast` | yes | 30 min |
 | Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | no | 10 min |
-| Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS) | no, until verified live | 60 min |
+| Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.
 
@@ -27,8 +29,8 @@ GitHub Actions runs `.github/workflows/stow-grid-watch.yml` every 15 minutes. It
 One-time setup:
 1. Merge this folder and the workflow to `main`. GitHub only runs scheduled workflows from the default branch.
 2. Repo **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Optional but recommended: **Settings → Secrets and variables → Actions → Variables → New repository variable** named `SGW_USER_AGENT`, set to `StowGridWatch/0.1 (contact: you@example.com)`.
-4. **Actions → Stow Grid Watch → Run workflow** for the first deploy.
+3. Optional but recommended: **Settings → Secrets and variables → Actions → Variables → New repository variable** named `SGW_USER_AGENT`, set to `GRID/0.1 (contact: you@example.com)`.
+4. **Actions → GRID → Run workflow** for the first deploy.
 5. Open `https://<user>.github.io/<repo>/` in Safari on the iPhone, tap Share, then Add to Home Screen.
 
 How it behaves on Pages:
