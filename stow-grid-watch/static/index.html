@@ -29,14 +29,16 @@
       <h1>GRID</h1>
       <p class="meta" id="loc-meta">Loading…</p>
     </div>
-    <button id="refresh" class="btn" aria-label="Refresh now">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 4a8 8 0 0 1 7.75 6h-2.1A6 6 0 1 0 18 13h2a8 8 0 1 1-8-9Zm5 0h3v6h-6V7h2.3A6 6 0 0 0 12 6V4c1.9 0 3.7.7 5 1.8V4Z"/></svg>
+    <button id="refresh" class="btn refresh-btn" aria-label="Refresh data now">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 4a8 8 0 0 1 7.75 6h-2.1A6 6 0 1 0 18 13h2a8 8 0 1 1-8-9Zm5 0h3v6h-6V7h2.3A6 6 0 0 0 12 6V4c1.9 0 3.7.7 5 1.8V4Z"/></svg>
+      <span id="refresh-label">Refresh</span>
     </button>
   </div>
   <p class="meta mono" id="updated">updated --:--</p>
   <p class="meta mono" id="version"></p>
 </header>
 
+<div id="ptr" class="ptr" aria-hidden="true">Pull to refresh</div>
 <main>
   <section id="banner" class="banner gray" aria-live="polite">
     <div class="banner-row"><span class="dot"></span><strong id="banner-label">UNKNOWN</strong></div>
@@ -51,12 +53,6 @@
     <ul class="items" data-items="nws_alerts fema_ipaws dhs_ntas" data-empty="No active alerts from NWS, IPAWS or DHS."></ul>
   </section>
 
-  <section class="card" id="card-forecast">
-    <h2>Forecast</h2>
-    <p class="hint">Now, plus any period in the next 48 hours with storms, snow, ice or a hard freeze. Forecasts are not events.</p>
-    <div class="feeds" data-feeds="nws_forecast noaa_spc"></div>
-    <ul class="items" data-items="noaa_spc nws_forecast" data-forecast-trim="1"></ul>
-  </section>
 
   <section class="card" id="card-fema">
     <h2>Disasters &amp; health</h2>
@@ -71,6 +67,20 @@
     <p class="hint"><strong>Grid threats:</strong> geomagnetic storms that can damage the power grid (NOAA, G4 severe and G5 extreme matter), and federal cyber advisories about attacks on critical infrastructure (CISA, last 30 days).</p>
     <div class="feeds" data-feeds="noaa_swpc cisa"></div>
     <ul class="items" data-items="noaa_swpc cisa" data-empty="No geomagnetic storm now or forecast, and no current infrastructure cyber advisories."></ul>
+  </section>
+
+  <section class="card" id="card-national">
+    <h2>National</h2>
+    <p class="hint">FEMA disaster and emergency declarations anywhere in the U.S. in the last 7 days. Context only; this does not change the banner. National alerts (Presidential, DHS) appear under Emergency alerts.</p>
+    <div class="feeds" data-feeds="fema_national"></div>
+    <ul class="items" data-items="fema_national" data-empty="No new federal declarations in the last 7 days."></ul>
+  </section>
+
+  <section class="card" id="card-forecast">
+    <h2>Forecast</h2>
+    <p class="hint">Now, plus any period in the next 48 hours with storms, snow, ice or a hard freeze. Forecasts are not events.</p>
+    <div class="feeds" data-feeds="nws_forecast noaa_spc"></div>
+    <ul class="items" data-items="noaa_spc nws_forecast" data-forecast-trim="1"></ul>
   </section>
 
 

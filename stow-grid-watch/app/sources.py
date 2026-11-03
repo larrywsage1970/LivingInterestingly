@@ -25,6 +25,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     # Earthquakes near the location. Optional.
     SourceSpec("usgs_quakes", "USGS earthquakes (300 km, 7 days)", cadence_s=1800, required=False,
                fetch=usgs.fetch, home_url=lambda loc: usgs.HOME),
+    # FEMA declarations anywhere in the U.S., last 7 days. Context only.
+    SourceSpec("fema_national", "FEMA declarations nationwide (7 days)", cadence_s=3600, required=False,
+               fetch=fema.fetch_national, home_url=lambda loc: "https://www.fema.gov/disaster/declarations"),
     # NOAA space weather: geomagnetic storms that can affect the power grid.
     SourceSpec("noaa_swpc", "NOAA space weather (grid storms)", cadence_s=1800, required=False,
                fetch=noaa.fetch_swpc, home_url=lambda loc: noaa.SWPC_HOME),

@@ -22,6 +22,7 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Nearby nuclear plants | NRC event-notification RSS filtered to Perry, Beaver Valley, Davis-Besse; Emergency Class read from the report. General/Site Area Emergency -> Red, Alert -> Amber. | no | 30 min |
 | Air quality | EPA AirNow public hourly file (`files.airnowtech.org`, no key; the web-service API was retired 2026-10-01). Nearest reporting area. Category 4-5 -> Amber, 6 Hazardous -> Red. | no | 30 min |
 | Health notices | CDC U.S. outbreak notices RSS, last 60 days. Shown only. | no | 60 min |
+| National declarations | FEMA OpenFEMA declarations nationwide, last 7 days, one item per disaster. Context only. | no | 60 min |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.

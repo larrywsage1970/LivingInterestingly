@@ -119,3 +119,23 @@ def test_cdc_recent_cdc_links_only(loc):
     assert [i["title"] for i in items] == ["Salmonella Outbreak SYNTHETIC"]
     assert items[0]["kind"] == "health"
     assert compute(loc, {"cdc": items})["color"] == "green"
+
+
+# --- FEMA nationwide ---
+def test_national_declarations_grouped_and_never_color_banner(loc):
+    from app.adapters import fema
+    rows = {"DisasterDeclarationsSummaries": [
+        {"disasterNumber": 9910, "state": "TX", "declarationType": "DR", "declarationTitle": "SYNTHETIC FLOODING",
+         "incidentType": "Flood", "declarationDate": "2030-01-09T00:00:00.000Z", "designatedArea": "A (County)",
+         "incidentBeginDate": "2030-01-05T00:00:00.000Z", "incidentEndDate": None},
+        {"disasterNumber": 9910, "state": "TX", "declarationType": "DR", "declarationTitle": "SYNTHETIC FLOODING",
+         "incidentType": "Flood", "declarationDate": "2030-01-09T00:00:00.000Z", "designatedArea": "B (County)"},
+        {"disasterNumber": 3700, "state": "CA", "declarationType": "EM", "declarationTitle": "SYNTHETIC WILDFIRE",
+         "incidentType": "Fire", "declarationDate": "2030-01-08T00:00:00.000Z", "designatedArea": "C (County)"},
+    ]}
+    items = fema.parse_national(rows)
+    assert len(items) == 2
+    tx = items[0]
+    assert tx["title"].startswith("TX: Major Disaster declaration DR-9910") and "2 designated area(s)" in tx["raw_excerpt"]
+    assert tx["url"] == "https://www.fema.gov/disaster/9910" and tx["national"] and "active" not in tx
+    assert compute(loc, {"fema_national": items})["color"] == "green"
