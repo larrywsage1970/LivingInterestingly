@@ -9,14 +9,15 @@ UA = {"User-Agent": "StowGridWatch/0.1 (contact: larrywsage@gmail.com)"}
 since = (datetime.now(timezone.utc) - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 LON, LAT = -81.4404, 41.1595
 
+since30 = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+GEO = f"geo.intersects(searchGeometry, geography'POINT({LON} {LAT})')"
 variants = {
-    "plain_top2": {"$top": "2"},
-    "sent_ge": {"$filter": f"sent ge '{since}'", "$top": "1", "$count": "true"},
-    "geo_nospace": {"$filter": f"geo.intersects(searchGeometry, geography'POINT({LON} {LAT})')", "$top": "1"},
-    "geo_srid": {"$filter": f"geo.intersects(searchGeometry, geography'SRID=4326;POINT({LON} {LAT})')", "$top": "1"},
-    "geo_only_space": {"$filter": f"geo.intersects(searchGeometry, geography 'POINT({LON} {LAT})')", "$top": "1"},
-    "sender_ne_nws": {"$filter": f"sent ge '{since}' and sender ne 'w-nws.webmaster@noaa.gov'", "$top": "1", "$count": "true"},
-    "contains_summit": {"$filter": f"sent ge '{since}' and contains(originalMessage,'039153')", "$top": "3", "$count": "true"},
+    "final_72h": {"$filter": f"sent ge '{since}' and {GEO}", "$orderby": "sent desc", "$top": "50"},
+    "final_72h_no_nws": {"$filter": f"sent ge '{since}' and sender ne 'w-nws.webmaster@noaa.gov' and {GEO}",
+                         "$orderby": "sent desc", "$top": "50"},
+    "sample_30d_no_nws": {"$filter": f"sent ge '{since30}' and sender ne 'w-nws.webmaster@noaa.gov' and {GEO}",
+                          "$orderby": "sent desc", "$top": "5"},
+    "sample_30d_any": {"$filter": f"sent ge '{since30}' and {GEO}", "$orderby": "sent desc", "$top": "2"},
 }
 
 
@@ -40,11 +41,12 @@ with httpx.Client(timeout=30, headers=UA) as c:
             print("metadata:", json.dumps(d.get("metadata"))[:300])
             recs = d.get("IpawsArchivedAlerts", [])
             print("records:", len(recs))
-            if recs and name == "plain_top2":
+            if recs and name.startswith("sample"):
                 print("record shape:", json.dumps(shape(recs[0]))[:2500])
                 info = (recs[0].get("info") or [{}])[0]
-                for a in info.get("area", []) or []:
-                    print("geocode valueNames:", [g.get("valueName") for g in a.get("geocode", []) or []][:5])
+                print("areas[0] shape:", json.dumps(shape((info.get("areas") or [{}])[0]))[:800])
+                print("status/msgType:", recs[0].get("status"), recs[0].get("msgType"), "| info langs:",
+                      [i.get("language") for i in recs[0].get("info") or []])
             for rec in recs[:3]:
                 info = (rec.get("info") or [{}])[0]
                 print(" -", rec.get("sender"), "|", rec.get("sent"), "|", info.get("event"))
