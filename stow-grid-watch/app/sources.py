@@ -37,9 +37,12 @@ SOURCES: tuple[SourceSpec, ...] = (
     # NRC event reports for nearby nuclear plants.
     SourceSpec("nrc", "NRC nuclear plant events (nearby)", cadence_s=1800, required=False,
                fetch=gov_extra.fetch_nrc, home_url=lambda loc: gov_extra.NRC_HOME),
-    # EPA AirNow air quality (needs AIRNOW_API_KEY).
+    # EPA AirNow air quality (public hourly file, no key).
     SourceSpec("airnow", "EPA AirNow air quality", cadence_s=1800, required=False,
                fetch=gov_extra.fetch_airnow, home_url=lambda loc: gov_extra.AIRNOW_HOME),
+    # CDC U.S. outbreak notices.
+    SourceSpec("cdc", "CDC U.S. outbreak notices", cadence_s=3600, required=False,
+               fetch=gov_extra.fetch_cdc, home_url=lambda loc: gov_extra.CDC_HOME),
     # PJM's own operations news (RSS). Optional: a news outage should not gray the banner.
     SourceSpec("pjm_insidelines", "PJM Inside Lines · Operations", cadence_s=1800, required=False,
                fetch=pjm.fetch, home_url=lambda loc: pjm.HOME),

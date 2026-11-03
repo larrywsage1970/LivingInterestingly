@@ -68,8 +68,6 @@ jobs:
           SGW_MIN_CADENCE_S: "1800"
           # Phone alerts (phase 9): private ntfy topic name. Unset = no pushes.
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          # EPA AirNow (free key from docs.airnowapi.org). Unset = air quality card unavailable.
-          AIRNOW_API_KEY: ${{ secrets.AIRNOW_API_KEY }}
           # Ask (phase 7): the deployed grid-ask Worker URL. Unset = Ask card hidden.
           SGW_ASK_URL: ${{ vars.SGW_ASK_URL }}
         run: python -m app.snapshot --out site --previous-url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"

@@ -1,0 +1,6 @@
+<?xml version="1.0"?><rss version="2.0"><channel><title>CDC Outbreaks - US Based</title>
+<item><title>&lt;em&gt;Salmonella&lt;/em&gt; Outbreak SYNTHETIC</title><link>https://www.cdc.gov/salmonella/outbreaks/synthetic/</link>
+<pubDate>Tue, 01 Jan 2030 12:00:00 GMT</pubDate><description>SYNTHETIC TEST TEXT.</description></item>
+<item><title>Old Outbreak SYNTHETIC</title><link>https://www.cdc.gov/old/</link><pubDate>Tue, 01 Jan 2029 12:00:00 GMT</pubDate></item>
+<item><title>Offsite SYNTHETIC</title><link>https://example.com/x</link><pubDate>Tue, 01 Jan 2030 12:00:00 GMT</pubDate></item>
+</channel></rss>

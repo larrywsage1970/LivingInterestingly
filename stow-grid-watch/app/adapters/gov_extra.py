@@ -11,8 +11,10 @@ NRC     www.nrc.gov/public-involve/rss?feed=event  (title "<EN number> - <facili
         is read for its Emergency Class (NRC's own label): General Emergency / Site Area
         Emergency -> Red; Alert -> Amber; Unusual Event or non-emergency -> shown only.
 
-AirNow  www.airnowapi.org (EPA). Needs AIRNOW_API_KEY. Current AQI by ZIP. EPA's own
-        category: 4 Unhealthy / 5 Very Unhealthy -> Amber; 6 Hazardous -> Red.
+AirNow  files.airnowtech.org public hourly file (no key; the old API was retired 2026-10-01).
+        Nearest reporting area. EPA category: 4 Unhealthy / 5 Very Unhealthy -> Amber; 6 Hazardous -> Red.
+
+CDC     U.S. outbreak notices RSS (tools.cdc.gov). Last 60 days. Shown only.
 """
 from __future__ import annotations
 
@@ -57,7 +59,7 @@ def parse_cisa(xml_text: str, now: datetime, days: int = 30) -> list[dict]:
         if not INFRA.search(title + " " + desc[:2000]):
             continue
         items.append(item("advisory", title=title, url=link, starts=posted.isoformat() if posted else None,
-                          issued=posted.isoformat() if posted else None, raw_excerpt=desc[:400],
+                          issued=posted.isoformat() if posted else None, raw_excerpt=desc[:3000],
                           sender="CISA", origin="cisa"))
     items.sort(key=lambda i: i["starts"] or "", reverse=True)
     return items[:6]
@@ -90,13 +92,16 @@ def parse_nrc_feed(xml_text: str) -> list[tuple[str, str, str]]:
     return out
 
 
-def emergency_class(report_html: str, en: str) -> str | None:
-    """Find the Emergency Class in the section of the daily report page for this EN number."""
+def report_section(report_html: str, en: str) -> str:
+    """Plain text of this EN number's section of the daily report page."""
     text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "  ", report_html))
     start = text.find(en)
-    if start < 0:
-        return None
-    m = CLASS_RE.search(text[start:start + 6000])
+    return text[start:start + 6000] if start >= 0 else ""
+
+
+def emergency_class(report_html: str, en: str) -> str | None:
+    """Find the Emergency Class in the section of the daily report page for this EN number."""
+    m = CLASS_RE.search(report_section(report_html, en))
     return m.group(1).strip().title() if m else None
 
 
@@ -112,45 +117,118 @@ async def fetch_nrc(client: httpx.AsyncClient, loc: Location) -> dict:
             pages[page_url] = p.text if p.status_code == 200 else ""
         cls = emergency_class(pages[page_url], en)
         items.append(item("nuclear", title=f"NRC event {en}: {facility}" + (f" · {cls}" if cls else ""),
-                          url=link, severity=cls, raw_excerpt=f"NRC Event Notification Report {en} for {facility}.",
+                          url=link, severity=cls,
+                          raw_excerpt=re.sub(r"\s+", " ", report_section(pages[page_url], en))[:3000]
+                          or f"NRC Event Notification Report {en} for {facility}.",
                           emergency_class=cls, facility=facility, sender="U.S. NRC", origin="nrc"))
     return result("nrc", "NRC nuclear plant events (nearby)", items)
 
 
 # ---------------- AirNow ----------------
-AIRNOW_API = "https://www.airnowapi.org/aq/observation/zipCode/current/"
+# The AirNow web-service API was retired Oct 1, 2026 (it now returns 410). AirNow's public
+# hourly file product needs no key: one pipe-delimited row per reporting area / pollutant.
+# Columns: IssueDate|ValidDate|ValidTime|TimeZone|HourOffset|DataType(O=observed, F=forecast,
+#          Y=yesterday)|Primary|ReportingArea|State|Lat|Lon|Parameter|AQI|Category|ActionDay|Discussion|Source
+AIRNOW_FILE = "https://files.airnowtech.org/airnow/today/reportingarea.dat"
 AIRNOW_HOME = "https://www.airnow.gov/"
+AQI_CATEGORY = {"good": 1, "moderate": 2, "unhealthy for sensitive groups": 3, "unhealthy": 4,
+                "very unhealthy": 5, "hazardous": 6}
 
 
-def parse_airnow(rows: list, zip_code: str) -> list[dict]:
-    items = []
-    for r in rows or []:
-        cat = r.get("Category") or {}
-        if r.get("AQI") is None:
+def _km(lat1, lon1, lat2, lon2) -> float:
+    import math
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = (math.sin((p2 - p1) / 2) ** 2
+         + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2)
+    return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+def parse_airnow_file(text: str, loc: Location, max_km: float = 60) -> list[dict]:
+    rows = []
+    for line in text.splitlines():
+        f = line.split("|")
+        if len(f) < 15:
             continue
-        hour = int(r.get("HourObserved") or 0)
-        date = (r.get("DateObserved") or "").strip()
+        try:
+            lat, lon = float(f[9]), float(f[10])
+        except ValueError:
+            continue
+        rows.append({"valid_date": f[1], "valid_time": f[2], "tz": f[3], "type": f[5], "primary": f[6] == "Y",
+                     "area": f[7], "state": f[8], "lat": lat, "lon": lon, "param": f[11],
+                     "aqi": int(f[12]) if f[12].strip().isdigit() else None, "category": f[13].strip(),
+                     "action_day": f[14].strip().lower() == "yes", "source": f[16].strip() if len(f) > 16 else "",
+                     "km": _km(loc.lat, loc.lon, lat, lon)})
+    near = [r for r in rows if r["km"] <= max_km and r["type"] in ("O", "F")]
+    if not near:
+        return []
+    area = min(near, key=lambda r: r["km"])["area"]
+    mine = [r for r in near if r["area"] == area]
+    items = []
+    obs = [r for r in mine if r["type"] == "O" and r["aqi"] is not None]
+    if obs:
+        worst = max(obs, key=lambda r: (AQI_CATEGORY.get(r["category"].lower(), 0), r["aqi"]))
         items.append(item(
             "airquality",
-            title=f"Air quality {r.get('ParameterName', '?')}: AQI {r['AQI']} · {cat.get('Name', '?')} · {r.get('ReportingArea', '')}",
-            url=f"{AIRNOW_HOME}?reportingArea=&zipcode={zip_code}",
-            severity=cat.get("Name"), starts=f"{date}T{hour:02d}:00" if date else None,
-            raw_excerpt=f"EPA AirNow current observation ({r.get('LocalTimeZone', 'local time')}).",
-            aqi=r["AQI"], aqi_category=cat.get("Number"), sender="EPA AirNow", origin="airnow",
+            title=f"Air quality now: AQI {worst['aqi']} {worst['category']} ({worst['param']}) · {area}, {worst['state']} · {round(worst['km'])} km away",
+            url=AIRNOW_HOME, severity=worst["category"],
+            starts=None, issued=None,
+            raw_excerpt=f"EPA AirNow observation for {area}, {worst['valid_date']} {worst['valid_time']} {worst['tz']}. "
+                        f"Reported by {worst['source'] or 'the local air agency'}.",
+            aqi=worst["aqi"], aqi_category=AQI_CATEGORY.get(worst["category"].lower()), sender="EPA AirNow",
+            origin="airnow", observed=True,
         ))
+    fc = [r for r in mine if r["type"] == "F" and r["primary"]]
+    if fc:
+        today = min(fc, key=lambda r: r["valid_date"])
+        cat = AQI_CATEGORY.get(today["category"].lower())
+        if cat and (cat >= 3 or today["action_day"]):
+            items.append(item(
+                "forecast",
+                title=f"Air quality forecast {today['valid_date']}: {today['category']} ({today['param']})"
+                      + (" · Air Quality Action Day" if today["action_day"] else ""),
+                url=AIRNOW_HOME, raw_excerpt=f"EPA AirNow forecast for {area}.", sender="EPA AirNow",
+                hazard_mentions=["air quality"], aqi_category=cat,
+            ))
     return items
 
 
 async def fetch_airnow(client: httpx.AsyncClient, loc: Location) -> dict:
-    key = os.environ.get("AIRNOW_API_KEY", "").strip()
-    if not key:
-        return result("airnow", "EPA AirNow air quality", error="AIRNOW_API_KEY is not set")
-    zip_code = (re.search(r"\b(\d{5})\b", loc.name) or re.search(r"(\d{5})", loc.id)).group(1)
-    try:
-        r = await client.get(AIRNOW_API, params={"format": "application/json", "zipCode": zip_code,
-                                                 "distance": "25", "API_KEY": key})
-    except httpx.HTTPError as exc:
-        return result("airnow", "EPA AirNow air quality", error=f"{type(exc).__name__} contacting AirNow")
-    if r.status_code != 200:
-        return result("airnow", "EPA AirNow air quality", error=f"AirNow HTTP {r.status_code}")   # never echo the URL (key)
-    return result("airnow", "EPA AirNow air quality", parse_airnow(r.json(), zip_code))
+    r = await client.get(AIRNOW_FILE)
+    r.raise_for_status()
+    return result("airnow", "EPA AirNow air quality", parse_airnow_file(r.text, loc))
+
+
+# ---------------- CDC ----------------
+# CDC's syndicated RSS of U.S.-based outbreak notices (verified current 2026-11-03).
+# CDC Health Alert Network has no current machine-readable feed (its archive data file is a
+# stale snapshot), so HAN stays a link.
+CDC_OUTBREAKS = "https://tools.cdc.gov/api/v2/resources/media/285676.rss"
+CDC_HOME = "https://www.cdc.gov/outbreaks/"
+
+
+def parse_cdc(xml_text: str, now: datetime, days: int = 60) -> list[dict]:
+    root = ET.fromstring(xml_text)
+    items = []
+    for it in root.iter("item"):
+        title = _strip(it.findtext("title"))
+        link = (it.findtext("link") or "").strip()
+        try:
+            posted = parsedate_to_datetime(it.findtext("pubDate") or "").astimezone(timezone.utc)
+        except (TypeError, ValueError):
+            continue
+        host = re.match(r"https?://([^/]+)/", link + "/")
+        if not title or not host or not (host.group(1) == "cdc.gov" or host.group(1).endswith(".cdc.gov")):
+            continue
+        link = "https://" + link.split("://", 1)[1]                   # always https
+        if now - posted > timedelta(days=days):
+            continue
+        items.append(item("health", title=title, url=link, starts=posted.isoformat(), issued=posted.isoformat(),
+                          raw_excerpt=_strip(it.findtext("description"))[:3000], sender="CDC", origin="cdc"))
+    items.sort(key=lambda i: i["starts"], reverse=True)
+    return items[:6]
+
+
+async def fetch_cdc(client: httpx.AsyncClient, loc: Location) -> dict:
+    r = await client.get(CDC_OUTBREAKS)
+    r.raise_for_status()
+    return result("cdc", "CDC U.S. outbreak notices", parse_cdc(r.text, datetime.now(timezone.utc)))

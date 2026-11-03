@@ -21,7 +21,7 @@ def compute(loc, extra):
 # --- SWPC ---
 def test_swpc_quiet_is_green(loc):
     items = noaa.parse_swpc(fixture("swpc_quiet.json"))
-    assert [i["g_scale"] for i in items] == [0, 0]
+    assert items == []                                   # quiet (G0) is not listed
     assert compute(loc, {"noaa_swpc": items})["color"] == "green"
 
 
@@ -97,31 +97,25 @@ def test_nrc_fetch_and_banner(loc):
     assert compute(loc, {"nrc": [sae]})["color"] == "red"
 
 
-# --- AirNow ---
-def test_airnow_categories(loc):
-    items = gov_extra.parse_airnow(fixture("airnow_bad.json"), "44224")
-    assert {i["aqi_category"] for i in items} == {5, 1}
+# --- AirNow (public file) ---
+def test_airnow_file_nearest_area_worst_observed_and_forecast(loc):
+    items = gov_extra.parse_airnow_file((FIX / "airnow_reportingarea.dat").read_text(), loc)
+    now, fc = items
+    assert "Canton and Massillon" in now["title"] and now["aqi"] == 175 and now["aqi_category"] == 4
+    assert fc["kind"] == "forecast" and "Action Day" in fc["title"]
     assert compute(loc, {"airnow": items})["color"] == "amber"
-    haz = dict(items[0], aqi_category=6)
+    haz = dict(now, aqi_category=6)
     assert compute(loc, {"airnow": [haz]})["color"] == "red"
 
 
-def test_airnow_key_never_leaks(loc, monkeypatch):
-    monkeypatch.setenv("AIRNOW_API_KEY", "SECRET-AIR-KEY")
-    t = mock_transport(fail=["/aq/"])
-
-    async def go():
-        async with httpx.AsyncClient(transport=t) as c:
-            return await gov_extra.fetch_airnow(c, loc)
-    r = asyncio.run(go())
-    assert t.seen[0].url.params["API_KEY"] == "SECRET-AIR-KEY"
-    assert r["ok"] is False and "SECRET" not in str(r)
+def test_airnow_file_nothing_nearby(loc):
+    far = "\n".join(l for l in (FIX / "airnow_reportingarea.dat").read_text().splitlines() if "Far Away" in l)
+    assert gov_extra.parse_airnow_file(far, loc) == []
 
 
-def test_airnow_missing_key(loc, monkeypatch):
-    monkeypatch.delenv("AIRNOW_API_KEY", raising=False)
-
-    async def go():
-        async with httpx.AsyncClient(transport=mock_transport()) as c:
-            return await gov_extra.fetch_airnow(c, loc)
-    assert "AIRNOW_API_KEY" in asyncio.run(go())["error"]
+# --- CDC ---
+def test_cdc_recent_cdc_links_only(loc):
+    items = gov_extra.parse_cdc((FIX / "cdc_outbreaks.xml").read_text(), NOW)
+    assert [i["title"] for i in items] == ["Salmonella Outbreak SYNTHETIC"]
+    assert items[0]["kind"] == "health"
+    assert compute(loc, {"cdc": items})["color"] == "green"

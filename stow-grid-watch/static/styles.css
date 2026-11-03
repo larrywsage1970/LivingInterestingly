@@ -110,6 +110,14 @@ a { color: var(--accent); }
 .ask-err { color: var(--amber); margin-top: 10px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .chip:focus-visible, #ask-form textarea:focus-visible, #ask-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+details.more { margin: 6px 0 2px; }
+details.more summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--accent); font-weight: 500; font-size: 14px; }
+details.more p { margin: 6px 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.d-instr { padding: 8px 10px; border-radius: 8px; background: var(--amber-bg); }
+.src-mini { color: var(--muted); font-size: 12px; text-decoration: underline; }
+details.links-fold { margin-top: 8px; }
+details.links-fold summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; color: var(--muted); font-size: 13px; }
+details.links-fold .links a { min-height: 36px; font-size: 14px; font-weight: 400; }
 .filter ol { margin: 0; padding-left: 20px; }
 .filter li { margin: 6px 0; }
 .foot { padding-top: 4px; padding-bottom: 28px; }

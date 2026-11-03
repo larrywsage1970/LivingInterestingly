@@ -39,6 +39,7 @@
       return `<span class="it-tag ${g >= 5 ? "crit" : g >= 4 ? "warn" : ""}">space weather · G${g}</span>`;
     }
     if (it.kind === "advisory") return `<span class="it-tag">CISA advisory</span>`;
+    if (it.kind === "health") return `<span class="it-tag">CDC notice</span>`;
     if (it.kind === "nuclear") {
       const c = (it.emergency_class || "").toLowerCase();
       const cls = /general|site area/.test(c) ? "crit" : /^alert/.test(c) ? "warn" : "";
@@ -75,12 +76,18 @@
       if (it.issued || it.declared) meta.push(`issued ${when(it.issued || it.declared)}`);
       if (it.ends) meta.push(`until ${when(it.ends)}`);
     }
+    // Everything readable here; the source link is small and secondary.
+    const parts = [];
+    if (it.area) parts.push(`<p class="d-area"><strong>Area:</strong> ${esc(it.area)}</p>`);
+    if (it.raw_excerpt) parts.push(`<p>${esc(it.raw_excerpt)}</p>`);
+    if (it.instruction) parts.push(`<p class="d-instr"><strong>What to do:</strong> ${esc(it.instruction)}</p>`);
+    const details = parts.length
+      ? `<details class="more"${it.kind === "alert" ? " open" : ""}><summary>Full details</summary>${parts.join("")}</details>` : "";
     return `<li>
       <p class="it-title">${tagFor(it)}${esc(it.title)}</p>
       <p class="it-meta">${meta.join(" · ")}</p>
-      <p class="it-meta">Source: ${esc(src)} · fetched ${hhmm(card.last_good_at)}</p>
-      ${it.raw_excerpt && !["forecast", "observation", "notice"].includes(it.kind) ? `<p class="it-excerpt">${esc(it.raw_excerpt)}</p>` : ""}
-      <a class="src-link" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">Open source ↗</a>
+      ${details}
+      <p class="it-meta">Source: ${esc(src)} · fetched ${hhmm(card.last_good_at)} · <a class="src-mini" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">source ↗</a></p>
     </li>`;
   }
 
@@ -122,10 +129,24 @@
     $$("[data-items]").forEach((ul) => {
       const ids = ul.dataset.items.split(" ");
       const recentOnly = ul.dataset.recentOnly === "1";
+      const trim = ul.dataset.forecastTrim === "1";
+      const lowF = data.location?.forecast_low_amber_f ?? 10;
+      let hidden = 0;
       const html = ids.flatMap((id) => {
         const c = data.cards[id];
-        return c ? c.items.filter((it) => !recentOnly || it.recent).map((it) => itemHtml(it, c)) : [];
+        if (!c) return [];
+        let list = c.items.filter((it) => !recentOnly || it.recent);
+        if (trim && id === "nws_forecast") {
+          // Current period always; later periods only when a storm/ice/freeze is in them.
+          list = list.filter((it, i) => {
+            const keep = i === 0 || (it.hazard_mentions || []).length > 0 || (it.is_low && it.temperature <= lowF);
+            if (!keep) hidden++;
+            return keep;
+          });
+        }
+        return list.map((it) => itemHtml(it, c));
       });
+      if (hidden) html.push(`<li class="empty">${hidden} later forecast period${hidden > 1 ? "s" : ""} hidden: no storms, ice or hard freeze.</li>`);
       const anyUsable = ids.some((id) => data.cards[id]?.last_good_at);
       ul.innerHTML = html.length ? html.join("")
         : `<li class="empty">${anyUsable ? esc(ul.dataset.empty || "None reported by the source.") : "No data yet. See the source links below."}</li>`;

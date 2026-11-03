@@ -42,6 +42,8 @@ def parse_alerts(payload: dict) -> list[dict]:
             starts=p.get("onset") or p.get("effective"),
             ends=p.get("ends") or p.get("expires"),
             raw_excerpt=p.get("description") or "",
+            instruction=(p.get("instruction") or "")[:3000],
+            area=p.get("areaDesc"),
             event=event,
             sender=p.get("senderName"),
             urgency=p.get("urgency"),

@@ -45,8 +45,10 @@ def mock_transport(alerts="nws_alerts_empty.json", fail=None):
             return httpx.Response(200, text="<rss><channel></channel></rss>")
         if p == "/public-involve/rss":
             return httpx.Response(200, text="<rss><channel></channel></rss>")
-        if p == "/aq/observation/zipCode/current/":
-            return httpx.Response(200, json=[])
+        if p == "/airnow/today/reportingarea.dat":
+            return httpx.Response(200, text="")
+        if p.endswith("/285676.rss"):
+            return httpx.Response(200, text="<rss><channel></channel></rss>")
         if p == "/ntas/1.1/alerts.xml":
             return httpx.Response(200, text=(FIX / "dhs_ntas_empty.xml").read_text(),
                                   headers={"content-type": "application/rss+xml"})

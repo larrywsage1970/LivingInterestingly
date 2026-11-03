@@ -45,7 +45,8 @@ def parse_swpc(payload: dict) -> list[dict]:
     now = payload.get("0") or {}
     g_now = _g(now)
     stamp = f"{now.get('DateStamp', '')}T{now.get('TimeStamp', '00:00:00')}+00:00" if now.get("DateStamp") else None
-    if g_now is not None:
+    # Quiet space weather (G0) is not shown: GRID lists storms only.
+    if g_now:
         items.append(item(
             "spaceweather",
             title=f"Geomagnetic storm level now: G{g_now} ({G_TEXT.get(g_now, '?')})",
@@ -55,7 +56,7 @@ def parse_swpc(payload: dict) -> list[dict]:
         ))
     fc = [(k, _g(payload.get(k)), (payload.get(k) or {}).get("DateStamp")) for k in ("1", "2", "3")]
     fc = [(k, g, d) for k, g, d in fc if g is not None]
-    if fc:
+    if fc and max(g for _, g, _ in fc) >= 1:
         k, g_max, day = max(fc, key=lambda x: x[1])
         items.append(item(
             "forecast",
