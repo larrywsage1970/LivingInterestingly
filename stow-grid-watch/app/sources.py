@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 
-from app.adapters import fema, nws
+from app.adapters import eia, fema, nws
 from app.adapters.base import SourceSpec
 
 SOURCES: tuple[SourceSpec, ...] = (
@@ -19,6 +19,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec("fema_declarations", "FEMA disaster declarations", cadence_s=3600, required=False,
                fetch=fema.fetch_declarations,
                home_url=lambda loc: "https://www.fema.gov/disaster/declarations"),
+    # Context only (no banner effect). EIA posts hourly data with a lag of an hour or more.
+    SourceSpec("eia_pjm", "EIA · PJM demand", cadence_s=3600, required=False,
+               fetch=eia.fetch, home_url=lambda loc: eia.PUBLIC_URL),
 )
 
 # Static (GitHub Pages) mode polls on a slower, irregular schedule. Raising the floor
