@@ -16,9 +16,9 @@
       "tz": "America/New_York",
       "links": [
         {"label": "NWS Cleveland office", "url": "https://www.weather.gov/cle/", "verified": true},
-        {"label": "FEMA disaster declarations (Ohio)", "url": "https://www.fema.gov/locations/ohio", "verified": false},
-        {"label": "Ohio Emergency Management Agency", "url": "https://ema.ohio.gov/", "verified": false},
-        {"label": "Summit County Emergency Management", "url": "https://co.summitoh.net/", "verified": false},
+        {"label": "FEMA disaster declarations (Ohio)", "url": "https://www.fema.gov/locations/ohio", "verified": true},
+        {"label": "Ohio Emergency Management Agency", "url": "https://ema.ohio.gov/", "verified": true},
+        {"label": "Summit County Emergency Management", "url": "https://co.summitoh.net/", "verified": true},
         {"label": "PJM emergency procedures", "url": "https://www.pjm.com/markets-and-operations/etools/emerg-procedure.aspx", "verified": true},
         {"label": "PJM Inside Lines", "url": "https://insidelines.pjm.com/", "verified": true},
         {"label": "FirstEnergy outages", "url": "https://www.firstenergycorp.com/outages_help.html", "verified": true},

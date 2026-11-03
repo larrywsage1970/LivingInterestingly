@@ -101,11 +101,11 @@
     const rest = $("[data-links='*rest']");
     if (rest) rest.innerHTML = links.filter((l) => !used.has(l.url)).map(linkHtml).join("");
   }
-  const linkHtml = (l) => `<li><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>${l.verified ? "" : `<span class="unverified">link unverified</span>`}</li>`;
+  const linkHtml = (l) => `<li><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.label)} ↗</a></li>`;
 
   function render(data, { offline = false } = {}) {
     const loc = data.location, b = data.banner;
-    $("#loc-meta").textContent = `${loc.name} · ${loc.county} · ${loc.utility} · ${loc.grid_operator}`;
+    $("#loc-meta").textContent = `${loc.name} · ${loc.county}`;
     $("#updated").textContent = `updated ${hhmm(b.computed_at)}`;
     // Version this page was loaded with vs. the newest published; a mismatch means "reopen".
     const mine = document.querySelector('meta[name="sgw-version"]')?.content || "dev";
@@ -162,6 +162,7 @@
   async function load(refresh = false) {
     const btn = $("#refresh");
     btn.classList.add("spin");
+    if (refresh) $("#refresh-label").textContent = "Refreshing…";
     try {
       const r = await fetch(statusUrl(refresh), { method: refresh && !STATIC ? "POST" : "GET", cache: "no-store" });
       if (!r.ok) throw new Error(r.status);
@@ -175,8 +176,31 @@
       else $("#banner-rule").textContent = "Cannot reach the server and nothing is saved on this device.";
     } finally {
       btn.classList.remove("spin");
+      if (refresh) {
+        $("#refresh-label").textContent = "Updated";
+        setTimeout(() => { $("#refresh-label").textContent = "Refresh"; }, 2000);
+      }
     }
   }
+
+  // Pull down from the top of the page to refresh (works in the Home Screen app).
+  (() => {
+    const ptr = $("#ptr");
+    let startY = null, pulled = 0;
+    window.addEventListener("touchstart", (e) => {
+      startY = window.scrollY <= 0 ? e.touches[0].clientY : null; pulled = 0;
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (startY === null) return;
+      pulled = Math.max(0, e.touches[0].clientY - startY);
+      ptr.style.height = `${Math.min(pulled, 90) * 0.6}px`;
+      ptr.textContent = pulled > 80 ? "Release to refresh" : "Pull to refresh";
+    }, { passive: true });
+    window.addEventListener("touchend", () => {
+      if (startY !== null && pulled > 80) load(true);
+      startY = null; pulled = 0; ptr.style.height = "0px";
+    });
+  })();
 
   $("#refresh").addEventListener("click", () => load(true));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });

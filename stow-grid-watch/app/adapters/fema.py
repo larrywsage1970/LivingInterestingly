@@ -69,6 +69,47 @@ async def fetch_declarations(client: httpx.AsyncClient, loc: Location) -> dict:
     return result("fema_declarations", "FEMA disaster declarations", items)
 
 
+# ---------- Nationwide declarations (last 7 days) ----------
+TYPE_WORDS = {"DR": "Major Disaster", "EM": "Emergency", "FM": "Fire Management"}
+
+
+def parse_national(payload: dict) -> list[dict]:
+    """OpenFEMA returns one row per designated area; collapse to one item per disaster number."""
+    by_num: dict = {}
+    for d in payload.get("DisasterDeclarationsSummaries", []):
+        num = d.get("disasterNumber")
+        if num is None:
+            continue
+        g = by_num.setdefault(num, {"d": d, "areas": set()})
+        if d.get("designatedArea"):
+            g["areas"].add(d["designatedArea"])
+    items = []
+    for num, g in by_num.items():
+        d = g["d"]
+        kind = TYPE_WORDS.get(d.get("declarationType"), d.get("declarationType") or "Declaration")
+        areas = sorted(g["areas"])
+        items.append(item(
+            "declaration",
+            title=f"{d.get('state', '')}: {kind} declaration {d.get('declarationType', '')}-{num} · {d.get('declarationTitle', '')} ({d.get('incidentType', '')})",
+            url=f"https://www.fema.gov/disaster/{num}",
+            starts=d.get("incidentBeginDate"), ends=d.get("incidentEndDate"),
+            raw_excerpt=f"{len(areas)} designated area(s): " + ", ".join(areas[:40]) + ("…" if len(areas) > 40 else ""),
+            declared=d.get("declarationDate"), incident_type=d.get("incidentType"),
+            declaration_type=d.get("declarationType"), state=d.get("state"),
+            national=True,   # context only: never colors the local banner
+        ))
+    items.sort(key=lambda i: i.get("declared") or "", reverse=True)
+    return items[:15]
+
+
+async def fetch_national(client: httpx.AsyncClient, loc: Location) -> dict:
+    since = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    params = {"$filter": f"declarationDate ge '{since}'", "$orderby": "declarationDate desc", "$top": "1000"}
+    r = await client.get(f"{OPENFEMA}/v2/DisasterDeclarationsSummaries", params=params)
+    r.raise_for_status()
+    return result("fema_national", "FEMA declarations nationwide (7 days)", parse_national(r.json()))
+
+
 # ---------- IPAWS (local + state + federal alerts) ----------
 
 def _is_nws(sender: str | None) -> bool:
