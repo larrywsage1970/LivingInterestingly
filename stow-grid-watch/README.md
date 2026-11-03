@@ -57,6 +57,7 @@ Add an object to `locations.json` (lat/lon, FIPS state + county, threshold, link
 - [x] The NWS calls work with the configured User-Agent (verified 2026-11-03).
 - [x] OpenFEMA IPAWS query verified live 2026-11-03 (syntax is `geography'POINT(lon lat)'`, no space). The archive is current to within days. About 40% of recent records have no geometry, which the second query covers.
 - [x] OpenFEMA declarations filter verified live 2026-11-03.
+- [x] EIA PJM demand verified live 2026-11-03 (data runs about 1–2 h behind real time; the key never appears in the published snapshot).
 - [ ] The URLs marked `"verified": false` in `locations.json`.
 - [ ] Replace the synthetic fixtures with recorded responses.
 
