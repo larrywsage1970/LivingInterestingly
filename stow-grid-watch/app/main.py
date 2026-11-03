@@ -46,7 +46,7 @@ def create_app(store: Store | None = None, client: httpx.AsyncClient | None = No
         if client is None:
             await state["client"].aclose()
 
-    app = FastAPI(title="Stow Grid Watch", version=VERSION, lifespan=lifespan)
+    app = FastAPI(title="GRID", version=VERSION, lifespan=lifespan)
 
     def _loc(location_id: str | None):
         loc = locations.get(location_id or default_loc)

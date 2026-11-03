@@ -32,10 +32,20 @@ def test_nws_forecast_48h_window_and_lows():
     assert all(i["kind"] == "forecast" and i["severity"] is None for i in items)
 
 
-def test_fema_declarations_active_flag():
+def test_fema_declarations_keep_active_drop_closed_over_2_days():
     items = fema.parse_declarations(fixture("fema_declarations.json"), NOW)
-    assert [i["active"] for i in items] == [True, False]
-    assert items[0]["url"] == "https://www.fema.gov/disaster/9901"
+    assert [i["title"].split(":")[0] for i in items] == ["EM-9901"]   # 2025 closed one dropped
+    assert items[0]["active"] and items[0]["url"] == "https://www.fema.gov/disaster/9901"
+
+
+def test_fema_declaration_closed_within_2_days_is_kept_then_dropped():
+    from datetime import timedelta
+    d = fixture("fema_declarations.json")
+    rec = d["DisasterDeclarationsSummaries"][1]
+    rec["incidentEndDate"] = (NOW - timedelta(days=1)).isoformat()
+    assert [i["active"] for i in fema.parse_declarations(d, NOW)] == [True, False]
+    rec["incidentEndDate"] = (NOW - timedelta(days=2, minutes=1)).isoformat()
+    assert [i["active"] for i in fema.parse_declarations(d, NOW)] == [True]
 
 
 def test_ipaws_filters_nws_tests_cancels_and_expired():

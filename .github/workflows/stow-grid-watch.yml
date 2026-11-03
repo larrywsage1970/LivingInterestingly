@@ -1,4 +1,4 @@
-name: Stow Grid Watch
+name: GRID
 
 # Polls the primary sources, writes a status snapshot, and publishes the PWA to GitHub Pages.
 # GitHub runs scheduled jobs late at busy times (often 5-20 min), so the snapshot's
@@ -50,7 +50,7 @@ jobs:
         env:
           # Set a repo variable SGW_USER_AGENT (Settings > Secrets and variables > Actions > Variables)
           # to override. NWS requires contact info in the User-Agent.
-          SGW_USER_AGENT: "${{ vars.SGW_USER_AGENT || 'StowGridWatch/0.1 (contact: larrywsage@gmail.com)' }}"
+          SGW_USER_AGENT: "${{ vars.SGW_USER_AGENT || 'GRID/0.1 (contact: larrywsage@gmail.com)' }}"
           SGW_MIN_CADENCE_S: "1800"
         run: python -m app.snapshot --out site --previous-url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
 

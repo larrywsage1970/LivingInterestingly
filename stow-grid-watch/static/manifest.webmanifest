@@ -1,6 +1,6 @@
 {
-  "name": "Stow Grid Watch",
-  "short_name": "Grid Watch",
+  "name": "GRID",
+  "short_name": "GRID",
   "description": "Primary-source status: weather, local and federal emergency alerts, grid and utility.",
   "start_url": "./",
   "scope": "./",

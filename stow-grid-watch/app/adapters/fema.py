@@ -30,11 +30,17 @@ def _dt(s: str | None) -> datetime | None:
 
 # ---------- disaster declarations ----------
 
+CLOSED_KEEP = timedelta(days=2)   # closed declarations drop off after this
+
+
 def parse_declarations(payload: dict, now: datetime) -> list[dict]:
+    """Active declarations (no incident end date, or one in the future), plus any that closed in the last 2 days."""
     items = []
     for d in payload.get("DisasterDeclarationsSummaries", []):
         end = _dt(d.get("incidentEndDate"))
         active = end is None or end >= now
+        if not active and end < now - CLOSED_KEEP:
+            continue
         num = d.get("disasterNumber")
         items.append(item(
             "declaration",
@@ -55,7 +61,7 @@ async def fetch_declarations(client: httpx.AsyncClient, loc: Location) -> dict:
     params = {
         "$filter": f"fipsStateCode eq '{loc.fips_state}' and fipsCountyCode eq '{loc.fips_county}'",
         "$orderby": "declarationDate desc",
-        "$top": "10",
+        "$top": "50",
     }
     r = await client.get(f"{OPENFEMA}/v2/DisasterDeclarationsSummaries", params=params)
     r.raise_for_status()

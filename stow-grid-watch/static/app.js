@@ -76,8 +76,7 @@
 
   function render(data, { offline = false } = {}) {
     const loc = data.location, b = data.banner;
-    $("#loc-name").textContent = loc.name;
-    $("#loc-meta").textContent = `${loc.county} · ${loc.utility} · ${loc.grid_operator}`;
+    $("#loc-meta").textContent = `${loc.name} · ${loc.county} · ${loc.utility} · ${loc.grid_operator}`;
     $("#updated").textContent = `updated ${hhmm(b.computed_at)}`;
     $("#offline").hidden = !offline;
 
