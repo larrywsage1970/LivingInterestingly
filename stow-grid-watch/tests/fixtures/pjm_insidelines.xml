@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>SYNTHETIC Inside Lines</title>
+<item><title>Operations Update: PJM Issues Cold Weather Alert for Jan. 11 (SYNTHETIC)</title>
+<link>https://insidelines.pjm.com/synthetic-cold-weather-alert/</link>
+<pubDate>Thu, 10 Jan 2030 14:00:00 +0000</pubDate>
+<category><![CDATA[Operations]]></category><category><![CDATA[cold weather alert]]></category>
+<description><![CDATA[<p>SYNTHETIC TEST TEXT.</p>]]></description></item>
+<item><title>Operations Update: PJM Issues Hot Weather Alert (SYNTHETIC, old)</title>
+<link>https://insidelines.pjm.com/synthetic-old-hot-weather/</link>
+<pubDate>Mon, 01 Jan 2030 14:00:00 +0000</pubDate>
+<category><![CDATA[Operations]]></category></item>
+<item><title>PJM Explains Winter Preparations (SYNTHETIC)</title>
+<link>https://insidelines.pjm.com/synthetic-winter-prep/</link>
+<pubDate>Thu, 10 Jan 2030 10:00:00 +0000</pubDate>
+<category><![CDATA[Reliability]]></category></item>
+<item><title>Off-site link should be dropped</title>
+<link>https://example.com/not-pjm</link>
+<pubDate>Thu, 10 Jan 2030 10:00:00 +0000</pubDate></item>
+</channel></rss>

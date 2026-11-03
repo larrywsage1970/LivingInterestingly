@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 
-from app.adapters import eia, fema, nws
+from app.adapters import eia, fema, nws, pjm
 from app.adapters.base import SourceSpec
 
 SOURCES: tuple[SourceSpec, ...] = (
@@ -22,6 +22,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     # Context only (no banner effect). EIA posts hourly data with a lag of an hour or more.
     SourceSpec("eia_pjm", "EIA · PJM demand", cadence_s=3600, required=False,
                fetch=eia.fetch, home_url=lambda loc: eia.PUBLIC_URL),
+    # PJM's own operations news (RSS). Optional: a news outage should not gray the banner.
+    SourceSpec("pjm_insidelines", "PJM Inside Lines · Operations", cadence_s=1800, required=False,
+               fetch=pjm.fetch, home_url=lambda loc: pjm.HOME),
 )
 
 # Static (GitHub Pages) mode polls on a slower, irregular schedule. Raising the floor

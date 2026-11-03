@@ -34,6 +34,8 @@
       return `<span class="it-tag">forecast</span>${h}`;
     }
     if (it.kind === "observation") return `<span class="it-tag">measured</span>`;
+    if (it.kind === "notice") return it.ops_action && it.recent
+      ? `<span class="it-tag warn">PJM operations update</span>` : `<span class="it-tag">PJM notice</span>`;
     if (it.kind === "declaration") {
       return it.active ? `<span class="it-tag warn">active declaration</span>` : `<span class="it-tag">closed declaration</span>`;
     }
@@ -60,7 +62,7 @@
       <p class="it-title">${tagFor(it)}${esc(it.title)}</p>
       <p class="it-meta">${meta.join(" · ")}</p>
       <p class="it-meta">Source: ${esc(src)} · fetched ${hhmm(card.last_good_at)}</p>
-      ${it.raw_excerpt && !["forecast", "observation"].includes(it.kind) ? `<p class="it-excerpt">${esc(it.raw_excerpt)}</p>` : ""}
+      ${it.raw_excerpt && !["forecast", "observation", "notice"].includes(it.kind) ? `<p class="it-excerpt">${esc(it.raw_excerpt)}</p>` : ""}
       <a class="src-link" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">Open source ↗</a>
     </li>`;
   }
