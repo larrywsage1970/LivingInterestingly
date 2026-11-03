@@ -11,6 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="sgw-mode" content="server">
 <meta name="sgw-ask-url" content="">
+<meta name="sgw-version" content="dev">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GRID">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -33,6 +34,7 @@
     </button>
   </div>
   <p class="meta mono" id="updated">updated --:--</p>
+  <p class="meta mono" id="version"></p>
 </header>
 
 <main>
@@ -66,15 +68,9 @@
 
   <section class="card pending">
     <h2>Power</h2>
-    <p class="hint"><strong>Outages at your address:</strong> FirstEnergy publishes no public outage feed. Text <strong>REG</strong> to <strong>544487</strong> to enroll, then <strong>OUT</strong> to report or <strong>STAT</strong> for status, or use the map below.</p>
-    <details class="links-fold"><summary>FirstEnergy links</summary><ul class="links" data-links="FirstEnergy"></ul></details>
-    <p class="hint" style="margin-top:12px"><strong>Grid threats:</strong> geomagnetic storms that can damage the power grid (NOAA, G4 severe and G5 extreme matter), and federal cyber advisories about attacks on critical infrastructure (CISA, last 30 days).</p>
+    <p class="hint"><strong>Grid threats:</strong> geomagnetic storms that can damage the power grid (NOAA, G4 severe and G5 extreme matter), and federal cyber advisories about attacks on critical infrastructure (CISA, last 30 days).</p>
     <div class="feeds" data-feeds="noaa_swpc cisa"></div>
     <ul class="items" data-items="noaa_swpc cisa" data-empty="No geomagnetic storm now or forecast, and no current infrastructure cyber advisories."></ul>
-    <p class="hint" style="margin-top:12px"><strong>Regional grid emergencies (PJM):</strong> alerts PJM has announced in the last 2 days, such as Maximum Generation or Load Management actions.</p>
-    <div class="feeds" data-feeds="pjm_insidelines"></div>
-    <ul class="items" data-items="pjm_insidelines" data-recent-only="1" data-empty="No PJM emergency actions announced in the last 2 days."></ul>
-    <details class="links-fold"><summary>PJM links</summary><ul class="links" data-links="PJM"></ul></details>
   </section>
 
 

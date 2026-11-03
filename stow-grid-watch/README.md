@@ -13,7 +13,6 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Weather alerts | NWS `api.weather.gov/alerts/active?point=` | yes | 5 min |
 | Forecast (48h) | NWS `/points` → `/forecast` | yes | 30 min |
 | Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | yes | 10 min |
-| PJM operations notices | PJM Inside Lines Operations RSS (`insidelines.pjm.com/category/operations/feed/`). Amber only for a post from the last 48h announcing an alert/advisory/emergency action (retrospectives excluded). Not the real-time Emergency Procedures system (that needs a PJM Tools account). | no | 30 min |
 | Utility outages | FirstEnergy: **no public outage data feed** (checked 2026-11-03; the outage map is an interactive app with internal data). Link-outs only: outage page, map, town search, text/email alerts. | n/a | n/a |
 | National security / terrorism | DHS NTAS XML feed (`dhs.gov/ntas/1.1/alerts.xml`). Imminent Threat Alert -> Red, Elevated -> Amber, Bulletin -> shown only. | no | 30 min |
 | Earthquakes | USGS FDSN GeoJSON, 300 km / 7 days / M2.5+. PAGER orange/red -> Red, yellow -> Amber; M4.5+ within 150 km in 24 h -> Amber. | no | 30 min |

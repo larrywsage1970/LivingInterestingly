@@ -48,6 +48,7 @@ def test_no_topic_means_no_request(monkeypatch):
 def test_snapshot_pushes_on_change_and_injects_ask_url(tmp_path, monkeypatch):
     monkeypatch.setenv("NTFY_TOPIC", "grid-test-topic")
     monkeypatch.setenv("SGW_ASK_URL", "https://grid-ask.example.workers.dev")
+    monkeypatch.setenv("SGW_VERSION", "2030.01.10-abc1234")
     previous = json.dumps({"banner": {"color": "green"}, "cards": {}})
     base = mock_transport("nws_alerts_warning.json").handle_request
 
@@ -69,6 +70,9 @@ def test_snapshot_pushes_on_change_and_injects_ask_url(tmp_path, monkeypatch):
     assert sent and sent[0].headers["Click"] == "https://pages.example/repo/"
     html = (tmp_path / "site" / "index.html").read_text()
     assert '<meta name="sgw-ask-url" content="https://grid-ask.example.workers.dev">' in html
+    assert '<meta name="sgw-version" content="2030.01.10-abc1234">' in html
+    status = json.loads((tmp_path / "site" / "api" / "status.json").read_text())
+    assert status["app_version"] == "2030.01.10-abc1234"
 
 
 def test_send_test_alert(monkeypatch):

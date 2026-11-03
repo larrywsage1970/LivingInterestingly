@@ -118,6 +118,7 @@ details.more p { margin: 6px 0; font-size: 14px; line-height: 1.5; white-space: 
 details.links-fold { margin-top: 8px; }
 details.links-fold summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; color: var(--muted); font-size: 13px; }
 details.links-fold .links a { min-height: 36px; font-size: 14px; font-weight: 400; }
+.stale-ver { color: var(--amber); }
 .filter ol { margin: 0; padding-left: 20px; }
 .filter li { margin: 6px 0; }
 .foot { padding-top: 4px; padding-bottom: 28px; }
