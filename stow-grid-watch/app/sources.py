@@ -12,8 +12,8 @@ SOURCES: tuple[SourceSpec, ...] = (
                fetch=nws.fetch_alerts, home_url=nws.alerts_home),
     SourceSpec("nws_forecast", "NWS forecast", cadence_s=1800, required=True,
                fetch=nws.fetch_forecast, home_url=nws.alerts_home),
-    # Not required until verified live (see app/adapters/fema.py).
-    SourceSpec("fema_ipaws", "IPAWS local/state alerts", cadence_s=600, required=False,
+    # Required: an IPAWS outage turns the banner Gray instead of a possibly wrong Green.
+    SourceSpec("fema_ipaws", "IPAWS local/state alerts", cadence_s=600, required=True,
                fetch=fema.fetch_ipaws,
                home_url=lambda loc: "https://www.fema.gov/about/openfema/data-sets#integrated"),
     SourceSpec("fema_declarations", "FEMA disaster declarations", cadence_s=3600, required=False,
