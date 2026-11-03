@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from dataclasses import asdict
 from datetime import datetime, timezone
 
 import httpx
@@ -12,10 +11,11 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import poller, status
+from app import poller
 from app.adapters.base import TIMEOUT
 from app.config import BASE_DIR, get_settings, load_locations
 from app.sources import SOURCES
+from app.payload import build_payload
 from app.store import Store
 
 VERSION = "0.1.0"
@@ -55,21 +55,7 @@ def create_app(store: Store | None = None, client: httpx.AsyncClient | None = No
         return loc
 
     def _status_payload(loc) -> dict:
-        st: Store = state["store"]
-        feeds = [status.Feed(s, st.latest(loc.id, s.id), st.last_good(loc.id, s.id)) for s in SOURCES]
-        banner = status.compute(feeds, loc, datetime.now(timezone.utc))
-        cards = {}
-        for f, fs in zip(feeds, banner["feeds"]):
-            # Show last good data even when failing, clearly labeled by feed state.
-            cards[f.spec.id] = {
-                **fs,
-                "items": f.last_good["items"] if f.last_good else [],
-                "home_url": f.spec.home_url(loc),
-            }
-        loc_info = asdict(loc)
-        return {"location": loc_info, "banner": {k: banner[k] for k in
-                ("color", "rule", "additional_triggers", "triggers", "computed_at")},
-                "cards": cards}
+        return build_payload(state["store"], loc, datetime.now(timezone.utc))
 
     @app.get("/api/health")
     def health():

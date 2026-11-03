@@ -4,7 +4,12 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const CACHE_KEY = "sgw:last-status";
   const params = new URLSearchParams(location.search);
-  const locParam = params.get("location") ? `?location=${encodeURIComponent(params.get("location"))}` : "";
+  const locId = params.get("location");
+  const STATIC = document.querySelector('meta[name="sgw-mode"]')?.content === "static";
+  // Relative URLs so the same files work at a domain root or under /<repo>/ on GitHub Pages.
+  const statusUrl = (refresh) => STATIC
+    ? `api/${locId ? `status-${encodeURIComponent(locId)}` : "status"}.json?t=${Date.now()}`
+    : `api/${refresh ? "refresh" : "status"}${locId ? `?location=${encodeURIComponent(locId)}` : ""}`;
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -76,12 +81,16 @@
     $("#updated").textContent = `updated ${hhmm(b.computed_at)}`;
     $("#offline").hidden = !offline;
 
+    // The phone checks the snapshot's age itself: if the updater stops, the board turns Gray.
+    const ageS = (Date.now() - new Date(b.computed_at).getTime()) / 1000;
+    const tooOld = data.stale_after_s && ageS > data.stale_after_s;
     const banner = $("#banner");
-    const color = offline ? "gray" : b.color;
+    const color = offline || tooOld ? "gray" : b.color;
     banner.className = `banner ${color}`;
     $("#banner-label").textContent = LABELS[color];
     let rule = b.rule + (b.additional_triggers ? ` (+${b.additional_triggers} more)` : "");
     if (offline) rule = `Offline. Last known: ${b.color.toUpperCase()}: ${b.rule}`;
+    else if (tooOld) rule = `Unknown: this status is ${Math.round(ageS / 60)} min old, so the updater may be stopped. Last known: ${b.color.toUpperCase()}: ${b.rule}`;
     $("#banner-rule").textContent = rule;
 
     $$("[data-feeds]").forEach((el) => {
@@ -100,11 +109,11 @@
     renderLinks(loc.links || []);
   }
 
-  async function load(method = "GET") {
+  async function load(refresh = false) {
     const btn = $("#refresh");
     btn.classList.add("spin");
     try {
-      const r = await fetch(`/api/${method === "POST" ? "refresh" : "status"}${locParam}`, { method, cache: "no-store" });
+      const r = await fetch(statusUrl(refresh), { method: refresh && !STATIC ? "POST" : "GET", cache: "no-store" });
       if (!r.ok) throw new Error(r.status);
       const data = await r.json();
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (_) {}
@@ -119,7 +128,7 @@
     }
   }
 
-  $("#refresh").addEventListener("click", () => load("POST"));
+  $("#refresh").addEventListener("click", () => load(true));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
   setInterval(() => { if (!document.hidden) load(); }, 120000);
   load();

@@ -1,0 +1,72 @@
+name: Stow Grid Watch
+
+# Polls the primary sources, writes a status snapshot, and publishes the PWA to GitHub Pages.
+# GitHub runs scheduled jobs late at busy times (often 5-20 min), so the snapshot's
+# staleness window is set to match (SGW_MIN_CADENCE_S) and the phone shows Gray
+# on its own if the snapshot gets older than that.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "stow-grid-watch/**"
+      - ".github/workflows/stow-grid-watch.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: stow-grid-watch-pages
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: stow-grid-watch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: stow-grid-watch/requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Test
+        run: python -m pytest -q
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Poll sources and build site
+        env:
+          # Set a repo variable SGW_USER_AGENT (Settings > Secrets and variables > Actions > Variables)
+          # with your contact email. NWS requires contact info; the repo URL is the fallback.
+          SGW_USER_AGENT: ${{ vars.SGW_USER_AGENT || format('StowGridWatch/0.1 (+https://github.com/{0})', github.repository) }}
+          SGW_MIN_CADENCE_S: "1800"
+        run: python -m app.snapshot --out site --previous-url "${{ steps.pages.outputs.base_url }}"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: stow-grid-watch/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

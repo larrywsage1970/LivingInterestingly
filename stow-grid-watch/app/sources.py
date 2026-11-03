@@ -1,6 +1,9 @@
 """Source registry. Add a source here and it is polled, stored, shown, and checked for staleness."""
 from __future__ import annotations
 
+import os
+from dataclasses import replace
+
 from app.adapters import fema, nws
 from app.adapters.base import SourceSpec
 
@@ -17,5 +20,11 @@ SOURCES: tuple[SourceSpec, ...] = (
                fetch=fema.fetch_declarations,
                home_url=lambda loc: "https://www.fema.gov/disaster/declarations"),
 )
+
+# Static (GitHub Pages) mode polls on a slower, irregular schedule. Raising the floor
+# keeps the 2x-cadence staleness rule honest about that instead of flapping to Gray.
+_MIN = int(os.environ.get("SGW_MIN_CADENCE_S", "0"))
+if _MIN:
+    SOURCES = tuple(replace(s, cadence_s=max(s.cadence_s, _MIN)) for s in SOURCES)
 
 BY_ID = {s.id: s for s in SOURCES}
