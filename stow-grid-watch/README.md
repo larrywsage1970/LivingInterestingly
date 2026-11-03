@@ -15,6 +15,7 @@ A phone-first status board for one location, built from primary sources only. Ev
 | Local / state alerts | FEMA OpenFEMA `IpawsArchivedAlerts` (county/state EMA messages sent through IPAWS; NWS ones dropped as duplicates). Two queries: polygon covers the point, plus records with no geometry matched on SAME code 039153/039000 or county name. | yes | 10 min |
 | PJM operations notices | PJM Inside Lines Operations RSS (`insidelines.pjm.com/category/operations/feed/`). Amber only for a post from the last 48h announcing an alert/advisory/emergency action (retrospectives excluded). Not the real-time Emergency Procedures system (that needs a PJM Tools account). | no | 30 min |
 | PJM demand + day-ahead forecast | EIA Open Data v2 `electricity/rto/region-data` (needs `EIA_API_KEY` repo secret). Context only, no banner effect. | no | 60 min |
+| Utility outages | FirstEnergy: **no public outage data feed** (checked 2026-11-03; the outage map is an interactive app with internal data). Link-outs only: outage page, map, town search, text/email alerts. | n/a | n/a |
 | Disaster declarations | FEMA OpenFEMA `DisasterDeclarationsSummaries` (county FIPS). Shows active declarations plus any closed in the last 2 days. | no | 60 min |
 
 To make a feed required, set `required=True` in `app/sources.py`.
@@ -49,6 +50,10 @@ How it behaves on Pages:
 3. Test: `python -m pytest -q` (offline; synthetic fixtures in `tests/fixtures`).
 4. Run: `set -a; . ./.env; set +a; uvicorn app.main:app --reload`, then open http://localhost:8000. This mode polls every 5 min and has a live refresh.
 5. Container: `docker build -t stow-grid-watch . && docker run -p 8000:8000 --env-file .env -v sgw-data:/data stow-grid-watch`. Use an always-on host and run one instance.
+
+## Sources checked and not connected
+- **PJM Emergency Procedures XML** (real-time PJM alerts): needs a PJM Tools account and browserless sign-in token; personal registration was refused (2026-11-03). GRID uses PJM Inside Lines RSS instead and links to the live Emergency Procedures page. If a member account becomes available, this is the upgrade path to a PJM-driven Red.
+- **FirstEnergy outage map data**: not offered for reuse; not scraped. Owners should enroll in FirstEnergy text/email outage alerts for their own address.
 
 ## Add a location
 Add an object to `locations.json` (lat/lon, FIPS state + county, threshold, links). Open it with `/?location=<id>`.

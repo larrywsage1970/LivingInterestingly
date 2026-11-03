@@ -21,7 +21,10 @@
         {"label": "Summit County Emergency Management", "url": "https://co.summitoh.net/", "verified": false},
         {"label": "PJM emergency procedures", "url": "https://www.pjm.com/markets-and-operations/etools/emerg-procedure.aspx", "verified": true},
         {"label": "PJM Inside Lines", "url": "https://insidelines.pjm.com/", "verified": true},
-        {"label": "FirstEnergy outages", "url": "https://www.firstenergycorp.com/outages_help.html", "verified": false},
+        {"label": "FirstEnergy outages", "url": "https://www.firstenergycorp.com/outages_help.html", "verified": true},
+        {"label": "FirstEnergy outage map", "url": "https://www.firstenergycorp.com/outages_help/outages-map.html", "verified": true},
+        {"label": "FirstEnergy outages by town", "url": "https://www.firstenergycorp.com/outages_help/my-town-search.html", "verified": true},
+        {"label": "FirstEnergy outage text & email alerts", "url": "https://www.firstenergycorp.com/outages_help/outage_help/outage_notifications.html", "verified": true},
         {"label": "NERC reliability assessments", "url": "https://www.nerc.com/pa/RAPA/ra/Pages/default.aspx", "verified": true},
         {"label": "Ready.gov power outages", "url": "https://www.ready.gov/power-outages", "verified": true}
       ]
