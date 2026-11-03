@@ -7,8 +7,7 @@ Two datasets:
                                     machine-readable path to LOCAL emergency alerts.
 NWS-originated IPAWS messages are dropped here because the NWS adapter covers them.
 
-UNVERIFIED: query shapes follow OpenFEMA docs but were not run live from the build
-session (network blocked). Verify before marking these sources required.
+Query syntax verified against the live API on 2026-11-03 (via a GitHub Actions probe).
 """
 from __future__ import annotations
 
@@ -20,6 +19,7 @@ from app.adapters.base import item, result
 from app.config import Location
 
 OPENFEMA = "https://www.fema.gov/api/open"
+NWS_SENDER = "w-nws.webmaster@noaa.gov"   # NWS alerts come from the NWS adapter instead
 
 
 def _dt(s: str | None) -> datetime | None:
@@ -83,7 +83,9 @@ def parse_ipaws(payload: dict, now: datetime) -> list[dict]:
         if expires and expires < now:
             continue
         ident = a.get("identifier", "")
-        areas = "; ".join(x.get("areaDesc", "") for x in info.get("area", []) if x)
+        # OpenFEMA names the CAP <area> list "areas"; accept "area" too.
+        area_list = info.get("areas") or info.get("area") or []
+        areas = "; ".join(x.get("areaDesc", "") for x in area_list if isinstance(x, dict) and x.get("areaDesc"))
         items.append(item(
             "alert",
             title=info.get("headline") or info.get("event") or "IPAWS alert",
@@ -105,8 +107,9 @@ def parse_ipaws(payload: dict, now: datetime) -> list[dict]:
 async def fetch_ipaws(client: httpx.AsyncClient, loc: Location) -> dict:
     since = (datetime.now(timezone.utc) - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     params = {
-        "$filter": (f"sent ge '{since}' and "
-                    f"geo.intersects(searchGeometry, geography 'POINT({loc.lon} {loc.lat})')"),
+        # Verified live 2026-11-03: OpenFEMA rejects a space between geography and the quote.
+        "$filter": (f"sent ge '{since}' and sender ne '{NWS_SENDER}' and "
+                    f"geo.intersects(searchGeometry, geography'POINT({loc.lon} {loc.lat})')"),
         "$orderby": "sent desc",
         "$top": "50",
     }

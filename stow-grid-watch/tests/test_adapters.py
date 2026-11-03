@@ -67,3 +67,22 @@ def test_adapter_failure_becomes_data_not_crash(loc):
 
     res = asyncio.run(go())
     assert res["ok"] is False and "503" in res["error"] and res["items"] == []
+
+
+def test_ipaws_query_uses_verified_geo_syntax_and_excludes_nws(loc):
+    t = mock_transport()
+
+    async def go():
+        async with httpx.AsyncClient(transport=t) as c:
+            return await fema.fetch_ipaws(c, loc)
+
+    res = asyncio.run(go())
+    assert res["ok"]
+    flt = t.seen[0].url.params["$filter"]
+    assert "geography'POINT(-81.4404 41.1595)'" in flt
+    assert "sender ne 'w-nws.webmaster@noaa.gov'" in flt
+
+
+def test_ipaws_area_desc_read_from_areas_field():
+    items = fema.parse_ipaws(fixture("fema_ipaws.json"), NOW)
+    assert "Summit County, OH" in items[0]["raw_excerpt"]

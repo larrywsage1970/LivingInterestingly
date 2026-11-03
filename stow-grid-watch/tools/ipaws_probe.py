@@ -11,13 +11,14 @@ LON, LAT = -81.4404, 41.1595
 
 since30 = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 GEO = f"geo.intersects(searchGeometry, geography'POINT({LON} {LAT})')"
+since7 = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 variants = {
-    "final_72h": {"$filter": f"sent ge '{since}' and {GEO}", "$orderby": "sent desc", "$top": "50"},
-    "final_72h_no_nws": {"$filter": f"sent ge '{since}' and sender ne 'w-nws.webmaster@noaa.gov' and {GEO}",
-                         "$orderby": "sent desc", "$top": "50"},
-    "sample_30d_no_nws": {"$filter": f"sent ge '{since30}' and sender ne 'w-nws.webmaster@noaa.gov' and {GEO}",
-                          "$orderby": "sent desc", "$top": "5"},
-    "sample_30d_any": {"$filter": f"sent ge '{since30}' and {GEO}", "$orderby": "sent desc", "$top": "2"},
+    "recent_geom_null": {"$filter": f"sent ge '{since7}' and searchGeometry eq null", "$top": "1", "$inlinecount": "allpages"},
+    "recent_geom_notnull": {"$filter": f"sent ge '{since7}' and searchGeometry ne null", "$top": "1", "$inlinecount": "allpages"},
+    "recent_any": {"$filter": f"sent ge '{since7}'", "$top": "1", "$inlinecount": "allpages"},
+    "same_summit_30d": {"$filter": f"sent ge '{since30}' and contains(originalMessage,'039153')", "$top": "5", "$orderby": "sent desc"},
+    "text_summit_oh_30d": {"$filter": f"sent ge '{since30}' and contains(originalMessage,'Summit') and contains(originalMessage,'OH')", "$top": "5", "$orderby": "sent desc"},
+    "nws_ohio_7d": {"$filter": f"sent ge '{since7}' and sender eq 'w-nws.webmaster@noaa.gov' and contains(originalMessage,'Ohio')", "$top": "3", "$orderby": "sent desc", "$inlinecount": "allpages"},
 }
 
 
@@ -40,8 +41,10 @@ with httpx.Client(timeout=30, headers=UA) as c:
             d = r.json()
             print("metadata:", json.dumps(d.get("metadata"))[:300])
             recs = d.get("IpawsArchivedAlerts", [])
-            print("records:", len(recs))
-            if recs and name.startswith("sample"):
+            print("records:", len(recs), "| count:", d.get("metadata", {}).get("count"))
+            for rec in recs[:5]:
+                print("   searchGeometry is", "null" if rec.get("searchGeometry") is None else "set")
+            if recs and name in ("same_summit_30d", "recent_geom_null"):
                 print("record shape:", json.dumps(shape(recs[0]))[:2500])
                 info = (recs[0].get("info") or [{}])[0]
                 print("areas[0] shape:", json.dumps(shape((info.get("areas") or [{}])[0]))[:800])
@@ -52,3 +55,17 @@ with httpx.Client(timeout=30, headers=UA) as c:
                 print(" -", rec.get("sender"), "|", rec.get("sent"), "|", info.get("event"))
         except Exception as e:  # noqa: BLE001
             print(f"\n=== {name}: {type(e).__name__}: {e}")
+
+
+# Cross-check: NWS's own archive of alerts for the point over the last 7 days.
+with httpx.Client(timeout=30, headers={**UA, "Accept": "application/geo+json"}) as c:
+    r = c.get("https://api.weather.gov/alerts", params={"point": f"{LAT},{LON}", "start": since7.replace(".000Z", "Z")})
+    print("\n=== NWS alerts for point, last 7d: HTTP", r.status_code)
+    if r.status_code == 200:
+        feats = r.json().get("features", [])
+        print("count:", len(feats))
+        for f in feats[:5]:
+            pr = f["properties"]
+            print(" -", pr.get("sent"), "|", pr.get("event"), "|", pr.get("status"))
+    else:
+        print(r.text[:300])
