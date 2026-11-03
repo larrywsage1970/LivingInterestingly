@@ -6,7 +6,8 @@ Precedence (first match wins):
   2. GRAY   any REQUIRED feed is failing, stale (> 2x cadence), or never fetched.
             Known Red is still shown; an unknown is never shown as Green or Amber.
   3. AMBER  NWS Watch or Advisory; any other active IPAWS alert; an active FEMA
-            declaration for the county; or a forecast low <= the location threshold.
+            declaration for the county; a forecast low <= the location threshold; or a
+            PJM post from the last 48h announcing an alert/advisory/emergency action.
   4. GREEN  none of the above and all required feeds fresh.
 
 "Usable" data = the last good fetch of a feed, if it is no older than 2x cadence.
@@ -89,6 +90,8 @@ def compute(feeds: list[Feed], loc: Location, now: datetime) -> dict:
                         red.append(f"{ev} from {it.get('sender') or 'issuing authority'} ({src}, checked {at})")
                     else:
                         amber.append(f"{ev} from {it.get('sender') or 'issuing authority'} ({src}, checked {at})")
+            elif it["kind"] == "notice" and it.get("ops_action") and it.get("recent"):
+                amber.append(f"PJM operations notice: {it['title']} ({src}, checked {at})")
             elif it["kind"] == "declaration" and it.get("active"):
                 amber.append(f"Active federal declaration {it['title']} ({src}, checked {at})")
             elif it["kind"] == "forecast" and it.get("is_low"):

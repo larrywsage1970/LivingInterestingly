@@ -10,6 +10,7 @@ kind separates event from risk:
     "declaration"  a formal emergency/disaster declaration (an event)
     "forecast"     a forecast (NOT an event)
     "observation"  a measured value, e.g. grid demand (context, NOT an event)
+    "notice"       an operator's published announcement (news post), not a real-time alert
 Severity is copied from the source or left None. Never invented.
 """
 from __future__ import annotations

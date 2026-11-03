@@ -37,6 +37,9 @@ def mock_transport(alerts="nws_alerts_empty.json", fail=None):
             return httpx.Response(200, json=fixture("nws_points.json"))
         if p.endswith("/forecast"):
             return httpx.Response(200, json=fixture("nws_forecast.json"))
+        if p == "/category/operations/feed/":
+            return httpx.Response(200, text=(FIX / "pjm_insidelines.xml").read_text(),
+                                  headers={"content-type": "application/rss+xml"})
         if p.endswith("/region-data/data/"):
             return httpx.Response(200, json=fixture("eia_pjm.json"))
         if p.endswith("/DisasterDeclarationsSummaries"):
