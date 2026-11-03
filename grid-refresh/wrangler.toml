@@ -1,0 +1,24 @@
+name = "grid-refresh"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Run the GRID update every 15 minutes. Cloudflare cron triggers run on time;
+# GitHub's own schedule stays on as a backup.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Not secret.
+[vars]
+GH_OWNER = "larrywsage1970"
+GH_REPO = "LivingInterestingly"
+GH_WORKFLOW = "stow-grid-watch.yml"
+GH_REF = "main"
+ALLOWED_ORIGIN = "https://larrywsage1970.github.io"
+MIN_GAP_SECONDS = "180"
+
+# GitHub fine-grained token (this repo only, Actions: Read and write), kept in
+# Cloudflare's Secrets Store - same store as youtube-transcript.
+[[secrets_store_secrets]]
+binding = "GITHUB_TOKEN"
+store_id = "51e50219e2f045c38a0b4956ae04726c"
+secret_name = "GRID_GITHUB_TOKEN"

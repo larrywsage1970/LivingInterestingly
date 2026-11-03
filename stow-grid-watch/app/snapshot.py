@@ -69,6 +69,9 @@ async def build(out: Path, previous_url: str | None, client: httpx.AsyncClient |
         html = html.replace('<meta name="sgw-mode" content="server">', '<meta name="sgw-mode" content="static">')
         version = os.environ.get("SGW_VERSION", "").strip() or "dev"
         html = html.replace('<meta name="sgw-version" content="dev">', f'<meta name="sgw-version" content="{version}">')
+        refresh_url = os.environ.get("SGW_REFRESH_URL", "").strip()
+        if refresh_url.startswith("https://"):
+            html = html.replace('<meta name="sgw-refresh-url" content="">', f'<meta name="sgw-refresh-url" content="{refresh_url}">')
         ask_url = os.environ.get("SGW_ASK_URL", "").strip()
         if ask_url.startswith("https://"):
             html = html.replace('<meta name="sgw-ask-url" content="">', f'<meta name="sgw-ask-url" content="{ask_url}">')
