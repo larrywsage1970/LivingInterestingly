@@ -40,6 +40,8 @@ def mock_transport(alerts="nws_alerts_empty.json", fail=None):
         if p.endswith("/DisasterDeclarationsSummaries"):
             return httpx.Response(200, json=fixture("fema_declarations.json"))
         if p.endswith("/IpawsArchivedAlerts"):
+            if "searchGeometry eq null" in req.url.params.get("$filter", ""):
+                return httpx.Response(200, json=fixture("fema_ipaws_nogeo.json"))
             return httpx.Response(200, json=fixture("fema_ipaws.json"))
         return httpx.Response(404)
 

@@ -79,6 +79,11 @@ def test_ipaws_query_uses_verified_geo_syntax_and_excludes_nws(loc):
     res = asyncio.run(go())
     assert res["ok"]
     flt = t.seen[0].url.params["$filter"]
+    assert "searchGeometry eq null" in t.seen[1].url.params["$filter"]
+    events = [i["event"] for i in res["items"]]
+    assert "Other County Notice" not in events          # other county dropped
+    assert "Local Area Emergency" in events             # matched by county name
+    assert "Duplicate Of Geo Record" not in events      # de-duplicated by identifier
     assert "geography'POINT(-81.4404 41.1595)'" in flt
     assert "sender ne 'w-nws.webmaster@noaa.gov'" in flt
 

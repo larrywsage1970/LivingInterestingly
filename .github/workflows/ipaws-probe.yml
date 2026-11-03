@@ -2,7 +2,7 @@ name: IPAWS probe (temporary)
 on:
   push:
     branches: [claude/ipaws-fix]
-    paths: [".github/workflows/ipaws-probe.yml", "stow-grid-watch/tools/ipaws_probe.py"]
+    paths: [".github/workflows/ipaws-probe.yml", "stow-grid-watch/**"]
 permissions:
   contents: read
 jobs:
@@ -13,4 +13,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install httpx==0.28.1 && python stow-grid-watch/tools/ipaws_probe.py
+      - working-directory: stow-grid-watch
+        env:
+          SGW_USER_AGENT: "StowGridWatch/0.1 (contact: larrywsage@gmail.com)"
+          SGW_MIN_CADENCE_S: "1800"
+        run: |
+          pip install -q -r requirements-dev.txt
+          python -m pytest -q
+          python -m app.snapshot --out /tmp/site
+          python -c "import json;d=json.load(open('/tmp/site/api/status.json'));c=d['cards']['fema_ipaws'];print('IPAWS state:',c['state'],'| error:',c.get('error'),'| items:',len(c['items']))"
