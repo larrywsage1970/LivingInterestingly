@@ -1,0 +1,17 @@
+{
+  "incidents": [
+    {"id": "00001104001120", "latitude": 41.312614, "longitude": -81.648602, "location": "Ramp from I-77 N to OH-82 E in both directions.", "description": "Expect lane closures on Ramp from I-77 N to OH-82 E, due to a crash.", "category": "Crash", "direction": "U", "routeName": "Ramp from I-77 N to OH-82 E", "roadStatus": "Open", "roadClosureDetails": null}
+  ],
+  "slowdowns": [
+    {"id": "f52ac03e", "latitude": 41.08768, "longitude": -80.65009, "location": "I-680 Northbound", "description": "", "normalMPH": 58, "currentMPH": 3, "routeName": "I-680", "direction": "Northbound"}
+  ],
+  "construction": [
+    {"id": "A1", "routeName": "Perkins ramp to SR 8 north", "description": "Perkins St. to SR 8 north ramp closed. The detour will be Perkins St.", "category": "Road Work - Planned", "direction": "northbound", "status": "Closed", "startDate": "2025-12-05T00:00:00", "endDate": "2031-08-01T23:59:00", "workZoneProjectId": "P1"},
+    {"id": "B1", "routeName": "State Route 176 culvert replacement, Richfield", "description": "SR 176 just south of Boston Rd. closed through mid-January.", "category": "Road Work - Planned", "direction": "northbound", "status": "Closed", "startDate": "2030-01-09T00:00:00", "endDate": "2030-01-24T23:59:00", "workZoneProjectId": "P2"},
+    {"id": "B2", "routeName": "State Route 176 culvert replacement, Richfield", "description": "SR 176 just south of Boston Rd. closed through mid-January.", "category": "Road Work - Planned", "direction": "southbound", "status": "Closed", "startDate": "2030-01-09T00:00:00", "endDate": "2030-01-24T23:59:00", "workZoneProjectId": "P2"},
+    {"id": "C1", "routeName": "I-77 in the City of Akron", "description": "Various lane restrictions for noise wall installation.", "category": "Road Work - Planned", "direction": "southbound", "status": "Restricted", "startDate": "2025-02-24T19:00:00", "endDate": "2030-11-30T05:00:00", "workZoneProjectId": "P3"},
+    {"id": "D1", "routeName": "Ghent Rd", "description": "Lanes open.", "category": "Road Work - Planned", "direction": "southbound", "status": "Open", "startDate": "2025-08-03T00:00:00", "endDate": "2030-11-30T23:59:00", "workZoneProjectId": "P4"},
+    {"id": "E1", "routeName": "Stow Rd. under I-480", "description": "Closed; ended already.", "category": "Road Work - Planned", "direction": "southbound", "status": "Closed", "startDate": "2029-06-29T00:00:00", "endDate": "2029-11-27T23:59:00", "workZoneProjectId": "P5"},
+    {"id": "F1", "routeName": "Future closure", "description": "Starts next month.", "category": "Road Work - Planned", "direction": "southbound", "status": "Closed", "startDate": "2030-02-10T00:00:00", "endDate": "2030-03-01T23:59:00", "workZoneProjectId": "P6"}
+  ]
+}

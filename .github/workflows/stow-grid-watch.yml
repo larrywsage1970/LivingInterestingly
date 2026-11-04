@@ -76,6 +76,8 @@ jobs:
           SGW_MIN_CADENCE_S: "1800"
           # Phone alerts (phase 9): private ntfy topic name. Unset = no pushes.
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # ODOT OHGO roads. The repo secret was saved as OHGO_API_KE; either name works.
+          OHGO_API_KEY: ${{ secrets.OHGO_API_KEY || secrets.OHGO_API_KE }}
           # Ask (phase 7): the deployed grid-ask Worker URL. Unset = Ask card hidden.
           SGW_ASK_URL: ${{ vars.SGW_ASK_URL }}
           # Refresh worker URL (grid-refresh). Unset = Refresh just reloads the latest snapshot.

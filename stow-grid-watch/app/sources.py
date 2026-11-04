@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 
-from app.adapters import dhs, fema, gov_extra, noaa, nws, usgs
+from app.adapters import dhs, fema, gov_extra, noaa, nws, ohgo, usgs
 from app.adapters.base import SourceSpec
 
 SOURCES: tuple[SourceSpec, ...] = (
@@ -46,6 +46,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     # CDC U.S. outbreak notices.
     SourceSpec("cdc", "CDC U.S. outbreak notices", cadence_s=3600, required=False,
                fetch=gov_extra.fetch_cdc, home_url=lambda loc: gov_extra.CDC_HOME),
+    # ODOT OHGO: crashes, closures and sudden slowdowns within 10 miles. Shown only, never colors the banner.
+    SourceSpec("ohgo", "OHGO Ohio roads (ODOT)", cadence_s=900, required=False,
+               fetch=ohgo.fetch, home_url=lambda loc: ohgo.HOME),
 )
 
 # Static (GitHub Pages) mode polls on a slower, irregular schedule. Raising the floor
