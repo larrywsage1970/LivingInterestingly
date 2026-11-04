@@ -211,22 +211,27 @@
     if (checking) return;
     checking = true;
     const label = $("#refresh-label"), btn = $("#refresh");
-    const before = (() => { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.banner?.computed_at; } catch (_) { return null; } })();
+    const shown = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.banner?.computed_at; } catch (_) { return null; } };
     btn.classList.add("spin"); label.textContent = "Checking sources…";
     try {
       const r = await fetch(refreshUrl.replace(/\/$/, "") + "/refresh", { method: "POST" });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-      label.textContent = d.action === "started" ? "Checking sources… (1–2 min)" : "Update already running…";
+      // Done once the board shows data computed after that update began. For "recent" /
+      // "already running" this may already be true, so check right away instead of
+      // waiting for an update that is not coming.
+      const since = Date.parse(d.started_at || "") || Date.now();
+      const fresh = () => { const t = Date.parse(shown() || ""); return t && t >= since; };
+      label.textContent = d.action === "started" ? "Checking sources… (1–2 min)" : "Update in progress…";
+      await load();
+      let done = fresh();
       const deadline = Date.now() + 4 * 60 * 1000;
-      while (Date.now() < deadline) {
-        await new Promise((res) => setTimeout(res, 15000));
+      while (!done && Date.now() < deadline) {
+        await new Promise((res) => setTimeout(res, 10000));
         await load();
-        let now = null;
-        try { now = JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.banner?.computed_at; } catch (_) {}
-        if (now && now !== before) { label.textContent = "Updated"; break; }
+        done = fresh();
       }
-      if (label.textContent !== "Updated") label.textContent = "Still waiting: try again shortly";
+      label.textContent = done ? (d.action === "started" ? "Updated" : "Up to date") : "Still waiting: try again shortly";
     } catch (_) {
       await load(true);
       label.textContent = "Reloaded (could not start a new check)";
