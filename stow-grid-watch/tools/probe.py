@@ -1,4 +1,4 @@
-"""Temporary probe: OHGO public API shape near Stow. Never prints the key."""
+"""Temporary probe: OHGO public API shape near Stow. Never prints the key. (run 3)"""
 import json, os
 import httpx
 
