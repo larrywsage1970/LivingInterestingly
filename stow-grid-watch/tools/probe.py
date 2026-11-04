@@ -11,7 +11,7 @@ def red(s):
     return s.replace(KEY, "***") if KEY else s
 
 
-print("key present:", bool(KEY), "len", len(KEY))
+print("key present:", bool(KEY), "len", len(KEY), "| in secrets:", os.environ.get("OHGO_IN_SECRET"), "| in variables:", os.environ.get("OHGO_IN_VAR"))
 with httpx.Client(timeout=30, headers=UA, follow_redirects=True) as c:
     for path, params, hdr in [
         ("/incidents", {"radius": "41.1595,-81.4404,15"}, {"Authorization": f"APIKEY {KEY}"}),
