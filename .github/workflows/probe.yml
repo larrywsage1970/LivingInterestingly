@@ -15,7 +15,7 @@ jobs:
         with: { python-version: "3.12" }
       - working-directory: stow-grid-watch
         env:
-          OHGO_API_KEY: ${{ secrets.OHGO_API_KEY || vars.OHGO_API_KEY }}
+          OHGO_API_KEY: ${{ secrets.OHGO_API_KEY || secrets.OHGO_API_KE }}
           OHGO_IN_SECRET: ${{ secrets.OHGO_API_KEY != '' }}
           OHGO_IN_VAR: ${{ vars.OHGO_API_KEY != '' }}
         run: pip install -q httpx==0.28.1 && python -m tools.probe
