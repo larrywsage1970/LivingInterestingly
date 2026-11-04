@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="simple">
 <header class="top">
   <div class="top-main">
     <div>
@@ -43,8 +43,20 @@
 <main>
   <section id="banner" class="banner gray" aria-live="polite">
     <div class="banner-row"><span class="dot"></span><strong id="banner-label">UNKNOWN</strong></div>
-    <p id="banner-rule" class="banner-rule">Waiting for first data…</p>
+    <p id="banner-plain" class="banner-plain">Checking official sources…</p>
+    <p id="banner-rule" class="banner-rule detail-only">Waiting for first data…</p>
   </section>
+
+  <section class="card" id="card-online">
+    <h2>Saw something online?</h2>
+    <ol class="online-steps">
+      <li><strong>Look at the color above.</strong> Green means no government agency has issued an alert, warning or emergency declaration for Stow or Summit County.</li>
+      <li><strong>Real emergencies reach your phone directly.</strong> Official warnings are sent to every phone in the area as Emergency Alerts, the same system GRID watches. If your phone did not alert you and GRID is green, it is not an official emergency here.</li>
+      <li><strong>Still unsure?</strong> <a href="https://www.fema.gov/disaster/rumor-response" target="_blank" rel="noopener">FEMA Rumor Response ↗</a> corrects false claims during disasters. <a href="https://ema.ohio.gov/" target="_blank" rel="noopener">Ohio EMA ↗</a> posts state emergencies.</li>
+    </ol>
+  </section>
+
+  <p id="quiet-summary" class="quiet-summary"></p>
   <p id="offline" class="offline" hidden>Offline: showing the last copy saved on this device.</p>
 
   <section class="card" id="card-alerts">
@@ -85,7 +97,7 @@
   </section>
 
 
-  <section class="card">
+  <section class="card detail-only">
     <h2>Source links</h2>
     <details class="links-fold"><summary>Show all source links</summary><ul class="links" data-links="*rest"></ul></details>
   </section>
@@ -111,7 +123,7 @@
     <div id="ask-out" aria-live="polite"></div>
   </section>
 
-  <section class="card filter">
+  <section class="card filter detail-only">
     <h2>Before you believe a post</h2>
     <ol>
       <li><strong>Who said it?</strong> Name the primary source (NWS, county or state EMA, FEMA, PJM, FirstEnergy). No source, no belief.</li>
@@ -122,6 +134,7 @@
   </section>
 </main>
 
+<div class="detail-toggle"><button id="detail-toggle" class="btn ghost" type="button" aria-pressed="false">Show details</button></div>
 <footer class="foot meta">Primary sources only. Every item links to its source. Gray means a feed is unavailable or stale, never "all clear".</footer>
 
 <script src="app.js"></script>

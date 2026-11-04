@@ -18,7 +18,48 @@
   const when = (iso) => iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
   const safeUrl = (u) => /^https:\/\//i.test(u || "") ? u : "#";
 
-  const LABELS = { green: "GREEN · NO ACTIVE ALERTS", amber: "AMBER · ADVISORY / WATCH", red: "RED · WARNING", gray: "GRAY · UNKNOWN" };
+  const LABELS = { green: "ALL CLEAR", amber: "HEADS UP", red: "TAKE ACTION", gray: "CAN'T CONFIRM" };
+
+  // ---- Simple view (default): plain words, only notable items ----
+  const DETAIL_KEY = "sgw:details";
+  let details = false;
+  try { details = localStorage.getItem(DETAIL_KEY) === "1"; } catch (_) {}
+  const applyMode = () => {
+    document.body.classList.toggle("simple", !details);
+    const t = $("#detail-toggle");
+    if (t) { t.textContent = details ? "Simple view" : "Show details"; t.setAttribute("aria-pressed", String(details)); }
+  };
+  applyMode();
+
+  /** Items worth showing someone who just wants to know "is anything happening?". */
+  function notable(it, id) {
+    switch (it.kind) {
+      case "alert": return true;
+      case "declaration": return !!it.active && !it.national;
+      case "spaceweather": return (it.g_scale || 0) >= 4;
+      case "nuclear": return /alert|site area|general/i.test(it.emergency_class || "");
+      case "airquality": return (it.aqi_category || 0) >= 3;
+      case "quake": return ["yellow", "orange", "red"].includes(it.pager) ||
+        (it.recent_24h && (it.magnitude || 0) >= 4.5 && (it.distance_km || 999) <= 150);
+      case "forecast":
+        if (id === "nws_forecast") return true;                 // trimmed separately: now + hazards
+        if (it.g_scale !== undefined) return it.g_scale >= 4;
+        if (it.aqi_category !== undefined) return it.aqi_category >= 3;
+        return true;                                            // SPC outlook only exists when Stow is in a risk area
+      default: return false;                                    // CISA, CDC, national declarations: details view only
+    }
+  }
+
+  function plainStatus(color, b, ageMin, offline) {
+    const when = ageMin < 2 ? "just now" : `${Math.round(ageMin)} minutes ago`;
+    if (offline) return "No connection right now. Showing the last information saved on this phone.";
+    if (color === "gray") return "GRID couldn't reach every official source just now. This is not a warning; it means \"not confirmed\". Tap Refresh, and remember real emergencies still reach your phone as Emergency Alerts.";
+    if (color === "green") return `No official emergencies for Stow or Summit County right now. Checked ${when}.`;
+    const first = (b.triggers?.[color] || [])[0] || b.rule;
+    const what = first.replace(/\s*\((?:[^()]*checked[^()]*)\)\s*$/, "").replace(/^Forecast, not an event:\s*/, "Forecast: ");
+    const more = b.additional_triggers ? ` (+${b.additional_triggers} more below)` : "";
+    return color === "red" ? `${what}${more}. See "What to do" below.` : `${what}${more}. No immediate action needed. Stay aware and check back.`;
+  }
   const STATE_TEXT = { fresh: "fresh", stale: "stale", failing: "unavailable", never: "not yet fetched" };
 
   function feedLine(f) {
@@ -85,7 +126,7 @@
       <p class="it-title">${tagFor(it)}${esc(it.title)}</p>
       <p class="it-meta">${meta.join(" · ")}</p>
       ${details}
-      <p class="it-meta">Source: ${esc(src)} · fetched ${hhmm(card.last_good_at)} · <a class="src-mini" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">source ↗</a></p>
+      <p class="it-meta src-line">Source: ${esc(src)} · fetched ${hhmm(card.last_good_at)} · <a class="src-mini" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">source ↗</a></p>
     </li>`;
   }
 
@@ -127,6 +168,7 @@
     if (offline) rule = `Offline. Last known: ${b.color.toUpperCase()}: ${b.rule}`;
     else if (tooOld) rule = `Unknown: this status is ${Math.round(ageS / 60)} min old, so the updater may be stopped. Last known: ${b.color.toUpperCase()}: ${b.rule}`;
     $("#banner-rule").textContent = rule;
+    $("#banner-plain").textContent = plainStatus(color, b, ageS / 60, offline);
 
     $$("[data-feeds]").forEach((el) => {
       el.innerHTML = el.dataset.feeds.split(" ").map((id) => data.cards[id]).filter(Boolean).map(feedLine).join("");
@@ -140,7 +182,7 @@
       const html = ids.flatMap((id) => {
         const c = data.cards[id];
         if (!c) return [];
-        let list = c.items.filter((it) => !recentOnly || it.recent);
+        let list = c.items.filter((it) => (!recentOnly || it.recent) && (details || notable(it, id)));
         if (trim && id === "nws_forecast") {
           // Current period always; later periods only when a storm/ice/freeze is in them.
           list = list.filter((it, i) => {
@@ -157,6 +199,17 @@
         : `<li class="empty">${anyUsable ? esc(ul.dataset.empty || "None reported by the source.") : "No data yet. See the source links below."}</li>`;
     });
     renderLinks(loc.links || []);
+
+    // Simple view: cards with nothing notable collapse into one calm line.
+    const quiet = [];
+    $$("main section.card").forEach((card) => {
+      const lists = $$("ul.items", card);
+      if (!lists.length) return;
+      const has = lists.some((ul) => $$("li", ul).some((li) => !li.classList.contains("empty")));
+      card.classList.toggle("quiet", !has);
+      if (!has) quiet.push(($("h2", card)?.textContent || "").replace(/\s*&\s*/g, " & ").toLowerCase());
+    });
+    $("#quiet-summary").textContent = quiet.length ? `Nothing active right now: ${quiet.join(", ")}.` : "";
   }
 
   async function load(refresh = false) {
@@ -242,6 +295,12 @@
     }
   }
   $("#refresh").addEventListener("click", refreshNow);
+  $("#detail-toggle").addEventListener("click", () => {
+    details = !details;
+    try { localStorage.setItem(DETAIL_KEY, details ? "1" : "0"); } catch (_) {}
+    applyMode();
+    try { const d = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); if (d) render(d); } catch (_) {}
+  });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
   setInterval(() => { if (!document.hidden) load(); }, 120000);
   load();
