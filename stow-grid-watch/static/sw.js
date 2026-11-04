@@ -1,6 +1,6 @@
 // App-shell cache only. Status data is never served from this cache;
 // app.js keeps its own last copy and labels it "offline".
-const SHELL = "sgw-shell-v12";
+const SHELL = "sgw-shell-v13";
 const FILES = ["./", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icons/icon.svg", "icons/apple-touch-icon.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {

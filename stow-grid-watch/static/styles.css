@@ -119,6 +119,16 @@ details.links-fold { margin-top: 8px; }
 details.links-fold summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; color: var(--muted); font-size: 13px; }
 details.links-fold .links a { min-height: 36px; font-size: 14px; font-weight: 400; }
 .stale-ver { color: var(--amber); }
+/* Simple view (default): plain status, only what matters, technical lines hidden. */
+.banner-plain { margin: 8px 0 0; font-size: 18px; line-height: 1.4; color: var(--text); font-weight: 500; }
+body.simple .detail-only, body.simple .feeds, body.simple .card .hint, body.simple .card.quiet,
+body.simple .it-meta.src-line, body.simple .card-links { display: none; }
+.quiet-summary { margin: 4px 0 12px; padding: 10px 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+.quiet-summary:empty, body:not(.simple) .quiet-summary { display: none; }
+.online-steps { margin: 0; padding-left: 20px; }
+.online-steps li { margin: 6px 0; line-height: 1.45; }
+.detail-toggle { max-width: 560px; margin: 8px auto 0; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); }
+.btn.ghost { width: 100%; font: 500 14px var(--sans); color: var(--muted); }
 .refresh-btn { display: inline-flex; gap: 6px; align-items: center; padding: 0 14px; font: 600 14px var(--sans); }
 .ptr { height: 0; overflow: hidden; display: grid; place-items: center; color: var(--muted); font-size: 13px; transition: height .15s ease; }
 @media (prefers-reduced-motion: reduce) { .ptr { transition: none; } }

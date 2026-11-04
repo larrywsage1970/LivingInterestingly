@@ -63,6 +63,14 @@ How it behaves on Pages:
 - **CDC Health Alert Network**: no current machine-readable HAN feed (the archive page's data file is a stale 2025 snapshot, checked 2026-11-03); link only.
 - **FirstEnergy outage map data**: not offered for reuse; not scraped. Owners should enroll in FirstEnergy text/email outage alerts for their own address.
 
+## Simple view (default)
+GRID opens in a simple view for anyone who just wants to know whether anything is happening:
+- **Banner:** a plain-language line. ALL CLEAR is "No official emergencies for Stow or Summit County right now"; HEADS UP and TAKE ACTION name what was issued; CAN'T CONFIRM explains that the status is unknown, not a warning.
+- **Cards:** only notable items are shown. Active alerts, active county declarations, G4+ storms, nuclear plant Alerts or higher, air quality of Unhealthy for Sensitive Groups or worse, significant nearby quakes, and the forecast (now plus hazards).
+- **Quiet sections** collapse into one line ("Nothing active right now: …").
+- **Technical lines** (feed status, source lines, CISA, CDC, national declarations, source links) appear under **Show details**. The choice is remembered on each phone.
+- **A "Saw something online?" card** explains how to check a post: the banner color, the fact that phones get official Emergency Alerts directly, and FEMA Rumor Response and Ohio EMA.
+
 ## Phone alerts (phase 9)
 GRID can push a notification to your phone when the banner turns **Amber or Red**, and when it clears back to **Green**. Gray (unknown) changes are not pushed, so a flaky feed won't page you. It uses [ntfy](https://ntfy.sh), a free app with no account required:
 1. Install **ntfy** from the App Store and allow notifications.
