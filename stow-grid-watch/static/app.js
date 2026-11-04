@@ -35,6 +35,7 @@
   function notable(it, id) {
     switch (it.kind) {
       case "alert": return true;
+      case "road": return !!it.notable;
       case "declaration": return !!it.active && !it.national;
       case "spaceweather": return (it.g_scale || 0) >= 4;
       case "nuclear": return /alert|site area|general/i.test(it.emergency_class || "");
@@ -78,6 +79,10 @@
     if (it.kind === "spaceweather") {
       const g = it.g_scale || 0;
       return `<span class="it-tag ${g >= 5 ? "crit" : g >= 4 ? "warn" : ""}">space weather · G${g}</span>`;
+    }
+    if (it.kind === "road") {
+      const t = { incident: "crash / incident", slowdown: "slowdown", closure: "road closed", restriction: "lane restriction" }[it.road_type] || "road";
+      return `<span class="it-tag ${it.road_closed || it.road_type === "slowdown" ? "warn" : ""}">${esc(t)}</span>`;
     }
     if (it.kind === "advisory") return `<span class="it-tag">CISA advisory</span>`;
     if (it.kind === "health") return `<span class="it-tag">CDC notice</span>`;

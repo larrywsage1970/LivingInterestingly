@@ -45,6 +45,8 @@ def mock_transport(alerts="nws_alerts_empty.json", fail=None):
             return httpx.Response(200, text="<rss><channel></channel></rss>")
         if p == "/public-involve/rss":
             return httpx.Response(200, text="<rss><channel></channel></rss>")
+        if p.startswith("/api/v1/") and req.url.host == "publicapi.ohgo.com":
+            return httpx.Response(200, json={"results": []})
         if p == "/airnow/today/reportingarea.dat":
             return httpx.Response(200, text="")
         if p.endswith("/285676.rss"):
@@ -66,3 +68,9 @@ def mock_transport(alerts="nws_alerts_empty.json", fail=None):
     t.seen = seen
     t.fail = fail
     return t
+
+
+@pytest.fixture(autouse=True)
+def _ohgo_key(monkeypatch):
+    """A dummy OHGO key so the roads feed is exercised against the mock transport."""
+    monkeypatch.setenv("OHGO_API_KEY", "test-key")
