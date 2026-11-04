@@ -1,5 +1,8 @@
+# Config for the grid-refresh Worker. It lives at the repo root because the
+# Cloudflare Git build for grid-refresh runs from the repository root.
+# (youtube-transcript builds from its own folder and is not affected.)
 name = "grid-refresh"
-main = "src/index.js"
+main = "grid-refresh/src/index.js"
 compatibility_date = "2026-10-01"
 
 # Run the GRID update every 15 minutes. Cloudflare cron triggers run on time;

@@ -22,11 +22,11 @@ Workers & Pages → **Secrets Store** → Create secret:
 - **Name:** `GRID_GITHUB_TOKEN`
 - **Value:** the token from step 1
 
-Use the same store as `youtube-transcript`. If your store ID isn't `51e50219e2f045c38a0b4956ae04726c`, update `wrangler.toml`.
+Use the same store as `youtube-transcript`. If your store ID isn't `51e50219e2f045c38a0b4956ae04726c`, update the repo-root `wrangler.toml`.
 
 ### 3. Deploy the Worker from Git
 Workers & Pages → **Create** → **Import a repository** → `LivingInterestingly`
-- **Root directory:** `grid-refresh`
+- **Root directory:** leave as the repository root. This Worker's config is the repo-root `wrangler.toml`, which points at `grid-refresh/src/index.js`.
 - **Deploy branch:** `main`. No build command is needed.
 
 After it deploys, copy the URL (for example `https://grid-refresh.<you>.workers.dev`) and check that `…/health` shows `{"ok":true}`.
