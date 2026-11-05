@@ -3,11 +3,12 @@ import { dueBrokers, flagListedFromFindings, seedBrokers } from "./brokers.ts";
 import { type Env, flag, loadIdentifiers, today } from "./config.ts";
 import { insertNew } from "./diff.ts";
 import { sendReport } from "./mail.ts";
+import { dueRequests } from "./removal.ts";
 import { buildReport } from "./report.ts";
 import { checkHibp } from "./sources/hibp.ts";
 import { checkLeakIndex } from "./sources/leakindex.ts";
 import { sweepWeb } from "./sources/websearch.ts";
-import type { BrokerRow, Finding, RunKind, SourceResult, StoredFinding } from "./types.ts";
+import type { BrokerRow, Finding, RemovalRequestRow, RunKind, SourceResult, StoredFinding } from "./types.ts";
 
 export interface RunSummary {
   runId: number;
@@ -30,6 +31,7 @@ export async function runScan(env: Env, kind: RunKind, now = new Date()): Promis
 
   let fresh: StoredFinding[] = [];
   let brokers: BrokerRow[] = [];
+  let requests: RemovalRequestRow[] = [];
   try {
     const ids = loadIdentifiers(env);
     const full = kind !== "weekly";
@@ -55,11 +57,13 @@ export async function runScan(env: Env, kind: RunKind, now = new Date()): Promis
       await flagListedFromFindings(env.DB, fresh, day);
       brokers = await dueBrokers(env.DB, day);
     }
+    // Weekly too: a 45-day follow-up shouldn't wait for the quarter.
+    requests = await dueRequests(env.DB, day);
   } catch (e) {
     errors.push(`Run failed: ${(e as Error).message}`);
   }
 
-  const report = buildReport({ kind, date: day, findings: fresh, brokersDue: brokers, errors, dashboardUrl: env.DASHBOARD_URL });
+  const report = buildReport({ kind, date: day, findings: fresh, brokersDue: brokers, requestsDue: requests, errors, dashboardUrl: env.DASHBOARD_URL });
   try {
     await sendReport(env, report);
   } catch (e) {

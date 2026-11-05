@@ -2,7 +2,7 @@
 
 Personal exposure monitor on Cloudflare Workers + D1. Checks Have I Been Pwned weekly; every quarter it also sweeps the web (Brave Search), optionally a leak index (Intelligence X), and walks the data broker checklist. Emails one short report with **only what is new**.
 
-> **This folder lives in a public repo.** That is safe only because the code holds no personal data: identifiers, keys, and findings live in Worker secrets and D1. Never commit `.dev.vars`, real identifiers, or report output. (`.gitignore` covers `.dev.vars`.)
+> Keep this repo **private**. The code holds no personal data (identifiers, keys, and findings live in Worker secrets and D1), but config such as `IGNORE_DOMAINS` and `REQUEST_FROM` can reveal your domains. Never commit `.dev.vars`, real identifiers, or report output. (`.gitignore` covers `.dev.vars`.)
 
 ## What runs when
 
@@ -21,7 +21,7 @@ All commands run from this folder: `cd identity-watch && npm install`.
 1. **Log in:** `npx wrangler login`
 2. **Create D1** and paste the `database_id` it prints into `wrangler.toml`:
    `npx wrangler d1 create identity_watch`
-3. **Apply the schema:** `npx wrangler d1 migrations apply identity_watch --remote`
+3. **Apply the schema** (both migrations): `npx wrangler d1 migrations apply identity_watch --remote`
 4. **Get keys:**
    - HIBP: haveibeenpwned.com/API/Key (paid; the lowest tier is fine at the default 6.5 s gap).
    - Brave Search API: api-dashboard.search.brave.com (free tier is enough: about 8 queries per quarter).
@@ -52,13 +52,30 @@ The Worker ships with `workers_dev = false` and refuses every HTTP request unles
 
 The dashboard lists open findings (set new / reviewed / actioned / dismissed), the broker checklist (listed status, opt-out submitted date, URL, notes), and recent runs. Entering an opt-out date schedules a re-check `BROKER_RECHECK_DAYS` (default 90) later. POSTs must be same-origin.
 
+## Removing things
+
+**Records in the dashboard**
+- **Dismiss** a finding: it stays in the database and never alerts again.
+- **Delete** a finding: it is forgotten. If it is still online, the next scan reports it as new. "Delete all dismissed" clears them in bulk.
+- **Remove** a broker: it disappears from your list and reports. It is kept as a hidden row so the seed list never re-adds it, and **Restore** brings it back. **Add broker** puts any other site on the checklist.
+
+**Your information on other sites** (you review everything; nothing is sent by the cron)
+- **Google first.** The dashboard links Google's *Results about you* (removes search results showing your phone, address, or email, and alerts you to new ones) and *Remove outdated content* (for pages already taken down).
+- **Brokers with a privacy email** (seeded: MyLife, Whitepages; add others in the row): **Email request** opens a pre-filled deletion and opt-out letter with your names, city, reply address, and any profile URLs the web sweep found on that broker. Edit it, then **Send request**. It is sent from `REQUEST_FROM`, with reply-to and BCC set to you. It is logged, the broker is marked submitted, and it comes due again in `BROKER_RECHECK_DAYS`.
+- **Form-only brokers** (most of them): **Open form**, complete it yourself (they use captchas and email verification, which this tool will not automate), then **Submitted form today** to log it and schedule the re-check.
+- **Other websites** (non-broker web findings): **Request removal** drafts a letter to the site. You enter the site's contact address. The finding is marked actioned, and the follow-up appears in your weekly email after `REQUEST_RECHECK_DAYS` (45). Mark each request **Gone: confirm** or **Still there**.
+
+The letter includes only what a site needs to find you: no phone, date of birth, or ID numbers. The sender refuses a draft containing an SSN-like number or an unfilled profile-URL placeholder.
+
+**To turn on email requests:** in Resend, add and verify a domain you own (DNS records at your registrar; takes about 10 minutes). Then set `REQUEST_FROM = "Your Name <privacy@yourdomain.com>"` in `wrangler.toml`, and optionally `wrangler secret put REQUEST_REPLY_TO` (defaults to `REPORT_TO`). Deploy, then run `npx wrangler d1 migrations apply identity_watch --remote` for migration 0002. Replies to these requests go to your inbox, not the tool.
+
 ## Leak index (off by default)
 
 Set `LEAKINDEX_ENABLED = "true"` in `wrangler.toml` and `npx wrangler secret put INTELX_API_KEY`. Free Intelligence X keys need `INTELX_BASE_URL = "https://free.intelx.io"` in `[vars]`. Only the leak's name, bucket, and date are stored; file contents are never fetched. *Built to the Intelligence X API docs and tested with mocks only. Watch the first real run's Errors section.*
 
 ## Broker list
 
-16 brokers are seeded on the first quarterly or manual run (insert-only, so your edits are never overwritten). Opt-out URLs were cross-checked against several 2025–26 privacy guides on 2026-11-05, but the broker sites could not be opened from the build environment, so each one is marked **unverified** in its notes. BeenVerified, FastPeopleSearch, MyLife, PeopleFinders, and ThatsThem have no URL because the guides disagree; their notes say where to look. Fix URLs in the dashboard as you confirm them.
+16 brokers are seeded on the first quarterly or manual run (insert-only, so your edits are never overwritten; a blank privacy email is filled in if the seed has one). Opt-out URLs were cross-checked against several 2025–26 privacy guides on 2026-11-05, but the broker sites could not be opened from the build environment, so each one is marked **unverified** in its notes. FastPeopleSearch, MyLife, PeopleFinders, and ThatsThem have no URL because the guides disagree or give none; their notes say where to look. The MyLife and Whitepages privacy emails also come from guides and are unverified. Fix URLs in the dashboard as you confirm them.
 
 Intelius, Instant Checkmate, and US Search all use the PeopleConnect Suppression Center: one request covers all three.
 
@@ -103,6 +120,7 @@ src/diff.ts          sha256 fingerprints, INSERT OR IGNORE ... RETURNING
 src/brokers.ts       seed list, due logic, auto-flag from web hits
 src/report.ts / mail.ts   email body, Resend
 src/access.ts        Cloudflare Access JWT verification
-src/dashboard.ts     /dashboard and its forms
-migrations/0001_init.sql
+src/dashboard.ts     /dashboard and its forms (delete/restore, add broker, request drafts)
+src/removal.ts       removal letter, send + log, follow-up due logic
+migrations/0001_init.sql, 0002_removal.sql
 ```

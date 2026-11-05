@@ -30,6 +30,12 @@ LEAKINDEX_ENABLED = "false"
 # Comma-separated domains to drop from web results (your own sites, social noise).
 IGNORE_DOMAINS = ""
 BROKER_RECHECK_DAYS = "90"
+# Removal requests (dashboard). Sending to brokers/sites needs an address on a
+# domain you verified in Resend; onboarding@resend.dev can only email you.
+# Leave blank to keep email requests off (form tracking still works).
+REQUEST_FROM = ""
+# Follow-up for removal requests to non-broker sites.
+REQUEST_RECHECK_DAYS = "45"
 # Phase 3: fill both after creating the Cloudflare Access application.
 ACCESS_TEAM_DOMAIN = ""
 ACCESS_AUD = ""

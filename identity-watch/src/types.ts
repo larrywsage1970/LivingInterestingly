@@ -30,6 +30,22 @@ export interface BrokerRow {
   optout_submitted: string | null;
   next_check: string | null;
   notes: string | null;
+  optout_email: string | null;
+  removed: number;
+}
+
+export interface RemovalRequestRow {
+  id: number;
+  target_type: "broker" | "finding";
+  target_id: number;
+  target_name: string;
+  channel: "email" | "form";
+  recipient: string | null;
+  subject: string | null;
+  body: string | null;
+  sent_at: string;
+  recheck_on: string | null;
+  status: "sent" | "confirmed" | "failed";
 }
 
 export type RunKind = "weekly" | "quarterly" | "manual";

@@ -15,6 +15,9 @@ export interface Env {
   // Vars (wrangler.toml)
   REPORT_FROM?: string;
   DASHBOARD_URL?: string;
+  REQUEST_FROM?: string;
+  REQUEST_REPLY_TO?: string;
+  REQUEST_RECHECK_DAYS?: string;
   WEBSEARCH_ENABLED?: string;
   LEAKINDEX_ENABLED?: string;
   IGNORE_DOMAINS?: string;

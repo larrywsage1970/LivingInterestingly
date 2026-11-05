@@ -2,13 +2,14 @@
 import { breachAdvice } from "./sources/hibp.ts";
 import { brokerForHost } from "./brokers.ts";
 import { hostOf } from "./sources/websearch.ts";
-import type { BrokerRow, RunKind, StoredFinding } from "./types.ts";
+import type { BrokerRow, RemovalRequestRow, RunKind, StoredFinding } from "./types.ts";
 
 export interface ReportInput {
   kind: RunKind;
   date: string;
   findings: StoredFinding[];
   brokersDue: BrokerRow[];
+  requestsDue?: RemovalRequestRow[];
   errors: string[];
   dashboardUrl?: string;
 }
@@ -59,7 +60,7 @@ export function buildReport(r: ReportInput): Report {
         where: f.url ?? "",
         todo: broker
           ? `data broker listing on ${broker.name}: submit opt-out, then log the date in the dashboard`
-          : "open it; if it exposes address or phone, request removal or dismiss",
+          : "open it; if it exposes address or phone, use Request removal in the dashboard (and Google's Results about you), or dismiss",
       };
     });
 
@@ -73,11 +74,18 @@ export function buildReport(r: ReportInput): Report {
         : "search yourself on the site; record listed / not listed",
   }));
 
+  const requests: Item[] = (r.requestsDue ?? []).map((q) => ({
+    what: `${q.target_name}: removal requested ${q.sent_at.slice(0, 10)}`,
+    where: q.recipient ?? q.channel,
+    todo: "check whether the page is gone; mark the request confirmed or still there in the dashboard",
+  }));
+
   const sections: [string, Item[]][] = [
     ["New breaches", breaches],
     ["New leak index hits", leaks],
     ["New web mentions", web],
     ["Brokers due for re-check", brokers],
+    ["Removal requests to confirm", requests],
   ];
 
   // ---- text ----
