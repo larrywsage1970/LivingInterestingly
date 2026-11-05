@@ -1,0 +1,35 @@
+# Identity Watch Worker. Deploy from THIS folder:  cd identity-watch && npx wrangler deploy
+# (The repo-root wrangler.toml belongs to grid-refresh and is not affected.)
+name = "identity-watch"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+# No public URL by default. Turn on only after Cloudflare Access is in front
+# of it (see README, Phase 3). Routes also verify the Access JWT and fail closed.
+workers_dev = false
+
+[triggers]
+# Mon 13:00 UTC weekly breach check; 1st of Jan/Apr/Jul/Oct 13:00 UTC full scan.
+# The quarterly string must match QUARTERLY_CRON in src/schedule.ts.
+crons = ["0 13 * * 1", "0 13 1 */3 *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "identity_watch"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true
+
+# Not secret. Identifiers and API keys go in `wrangler secret put` (see README).
+[vars]
+REPORT_FROM = "Identity Watch <onboarding@resend.dev>"
+WEBSEARCH_ENABLED = "true"
+LEAKINDEX_ENABLED = "false"
+# Comma-separated domains to drop from web results (your own sites, social noise).
+IGNORE_DOMAINS = ""
+BROKER_RECHECK_DAYS = "90"
+# Phase 3: fill both after creating the Cloudflare Access application.
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""

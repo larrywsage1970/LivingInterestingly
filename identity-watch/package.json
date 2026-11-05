@@ -1,0 +1,19 @@
+{
+  "name": "identity-watch",
+  "private": true,
+  "type": "module",
+  "description": "Personal exposure monitor: HIBP breaches, web mentions, leak index, data broker opt-out tracking. Emails only what is new.",
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply identity_watch --local",
+    "db:migrate:remote": "wrangler d1 migrations apply identity_watch --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261103.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.157.0"
+  }
+}
